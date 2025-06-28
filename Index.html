@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Chart.js for visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- PapaParse for CSV parsing -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sanpeggio's Supply Chain Intelligence Platform</title>
@@ -220,6 +225,8 @@
             const [isProcessing, setIsProcessing] = useState(false);
             const [processedData, setProcessedData] = useState([]);
             const [analytics, setAnalytics] = useState({});
+            const priceTrendRef = useRef(null);
+            const categorySpendRef = useRef(null);
             const fileInputRef = useRef(null);
 
             const stores = [
@@ -433,6 +440,133 @@
             const currentStore = stores[activeTab];
             const currentAnalytics = analytics[currentStore.name];
 
+            useEffect(() => {
+                if (viewMode !== 'analytics' || !processedData.length) return;
+                // Prepare data for price trend chart
+                const headerKeys = Object.keys(processedData[0]);
+                const categoryKey = headerKeys.find(k =>
+                    k.trim().toLowerCase() === 'product class description'
+                );
+
+                // 1) Transform rows: compute invoiceDate and unitPrice
+                const raw = processedData.map(row => {
+                    const date = new Date(row['Invoice Date']);
+                    const qty  = parseFloat(row['Qty Shipped']) || 0;
+                    const ext  = parseFloat(row['Ext. Price'])    || 0;
+                    const up   = parseFloat(row['Unit Price']);
+                    const unitPrice = (up > 0) ? up : (qty > 0 ? ext/qty : 0);
+                    return { 
+                        invoiceDate: date,
+                        category: (row['Product Class Description'] || '').trim(),
+                        unitPrice 
+                    };
+                });
+
+                // 2) Aggregate by month & category
+                const byMonth = {};
+                raw.forEach(({ invoiceDate, category, unitPrice }) => {
+                    const m = invoiceDate.toISOString().slice(0,7);
+                    byMonth[m] = byMonth[m]||{};
+                    const cell = byMonth[m][category] ||= { sum:0, count:0 };
+                    cell.sum   += unitPrice;
+                    cell.count += 1;
+                });
+                const labels = Object.keys(byMonth).sort();
+                const cats   = Array.from(new Set(raw.map(r=>r.category)));
+                const datasets = cats.map(cat => ({
+                    label: cat,
+                    data: labels.map(m => {
+                    const e = byMonth[m][cat];
+                    return e ? e.sum/e.count : null;
+                    }),
+                    fill: false,
+                    borderWidth: 2
+                }));
+
+                // 3) Destroy old chart if it exists
+                if (priceTrendRef.current._chart) {
+                    priceTrendRef.current._chart.destroy();
+                }
+
+                // 4) Instantiate new Chart.js line chart
+                const ctx = priceTrendRef.current.getContext('2d');
+                priceTrendRef.current._chart = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels, datasets },
+                    options: {
+                    responsive: true,
+                    plugins: { title: { display: true, text: 'Avg Unit Price by Category (Monthly)' } },
+                    scales: {
+                        x: { title: { display: true, text: 'Month' } },
+                        y: { title: { display: true, text: 'Unit Price' } }
+                    }
+                    }
+                });
+                // --- CATEGORY SPEND SHARE & WAC ---
+
+                // 1) Aggregate total spend and total qty per category
+                const spendAgg = {};
+                processedData.forEach(row => {
+                    const cat = (row[categoryKey] || '').trim();
+                    const ext = parseFloat(row['Ext. Price']) || 0;
+                    const qty = parseFloat(row['Qty Shipped']) || 0;
+                    if (!spendAgg[cat]) spendAgg[cat] = { totalSpend: 0, totalQty: 0 };
+                    spendAgg[cat].totalSpend += ext;
+                    spendAgg[cat].totalQty   += qty;
+                });
+
+                // 2) Prepare labels and data arrays
+                const catLabels = Object.keys(spendAgg);
+                const catSpendData = catLabels.map(c => spendAgg[c].totalSpend);
+                const catWacData   = catLabels.map(c => {
+                    const { totalSpend, totalQty } = spendAgg[c];
+                    return totalQty > 0 ? totalSpend/totalQty : 0;
+                });
+
+                // 3) Destroy old chart if exists
+                if (categorySpendRef.current._chart) {
+                    categorySpendRef.current._chart.destroy();
+                }
+
+                // 4) Render bar chart for % spend and line for WAC
+                const ctx2 = categorySpendRef.current.getContext('2d');
+                categorySpendRef.current._chart = new Chart(ctx2, {
+                    type: 'bar',
+                    data: {
+                        labels: catLabels,
+                        datasets: [
+                            {
+                                label: '% of Total Spend',
+                                data: catSpendData.map(v => (v / catSpendData.reduce((a,b)=>a+b,0)) * 100),
+                                yAxisID: 'y-spend',
+                                backgroundColor: 'rgba(220, 38, 38, 0.5)',},
+                            {
+                                label: 'Weighted Avg Cost',
+                                data: catWacData,
+                                type: 'line',
+                                yAxisID: 'y-wac',
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            'y-spend': {
+                            position: 'left',
+                            title: { display: true, text: '% of Spend' }
+                        },
+                        'y-wac': {
+                            position: 'right',
+                            title: { display: true, text: 'WAC ($)' }
+                        }
+                    },
+                    plugins: {
+                        title: { display: true, text: 'Category Spend Share & WAC' }
+                    }
+                }
+            });
+        }, [viewMode, processedData]);
+
             return (
                 <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 fade-in">
                     {/* Header */}
@@ -600,6 +734,20 @@
                                         <BarChartIcon className="text-blue-600" />
                                         Analytics Dashboard - {currentStore.name}
                                     </h2>
+                                    <h1>Sanpeggio’s PFG Analytics</h1>
+                                    {/* Monthly Price Trend */}
+                                    <canvas
+                                        ref={priceTrendRef}
+                                        width="800"
+                                        height="400"
+                                    />
+                                    {/* Category Spend Share */}
+                                    <canvas
+                                        ref={categorySpendRef}
+                                        width="800"
+                                        height="400"
+                                    />
+
 
                                     {currentAnalytics ? (
                                         <div className="space-y-8">
