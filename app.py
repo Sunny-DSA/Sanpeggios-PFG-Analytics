@@ -59,6 +59,7 @@ def index():
 @app.route('/api/upload', methods=['POST'])
 def upload_invoice():
     from models import Store, Upload, InvoiceRecord
+    from sqlalchemy import select, and_
     import json
     
     data = request.json
@@ -76,18 +77,40 @@ def upload_invoice():
     db.session.add(upload)
     db.session.flush()
     
+    new_records = 0
+    duplicate_records = 0
+    
     for record_data in records:
+        invoice_number = record_data.get('Invoice Number')
+        invoice_date = record_data.get('Invoice Date')
+        product_code = record_data.get('Product Code')
+        
+        existing = db.session.execute(
+            select(InvoiceRecord).where(
+                and_(
+                    InvoiceRecord.store_id == store_id,
+                    InvoiceRecord.invoice_number == invoice_number,
+                    InvoiceRecord.invoice_date == invoice_date,
+                    InvoiceRecord.product_code == product_code
+                )
+            )
+        ).first()
+        
+        if existing:
+            duplicate_records += 1
+            continue
+        
         record = InvoiceRecord(
             upload_id=upload.id,
             store_id=store_id,
-            invoice_number=record_data.get('Invoice Number'),
-            invoice_date=record_data.get('Invoice Date'),
+            invoice_number=invoice_number,
+            invoice_date=invoice_date,
             customer_name=record_data.get('Customer Name'),
             address=record_data.get('Address'),
             city=record_data.get('City'),
             state=record_data.get('State'),
             zip_code=record_data.get('Zip'),
-            product_code=record_data.get('Product Code'),
+            product_code=product_code,
             product_description=record_data.get('Product Description'),
             brand=record_data.get('Brand'),
             category=record_data.get('Category'),
@@ -99,13 +122,16 @@ def upload_invoice():
             vendor_code=record_data.get('Vendor Code')
         )
         db.session.add(record)
+        new_records += 1
     
     db.session.commit()
     
     return jsonify({
         'success': True,
         'upload_id': upload.id,
-        'message': f'Successfully uploaded {len(records)} records'
+        'new_records': new_records,
+        'duplicate_records': duplicate_records,
+        'message': f'Successfully uploaded {new_records} new records ({duplicate_records} duplicates skipped)'
     })
 
 @app.route('/api/stores', methods=['GET'])

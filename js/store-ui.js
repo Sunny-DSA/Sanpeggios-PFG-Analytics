@@ -128,6 +128,9 @@ const StoreUI = {
         successCount++;
         
         const saveCheckbox = document.getElementById('saveToDatabase');
+        let totalNewRecords = 0;
+        let totalDuplicates = 0;
+        
         if (saveCheckbox && saveCheckbox.checked && typeof DatabaseManager !== 'undefined') {
           for (const storeInfo of fileInfo.stores) {
             try {
@@ -138,6 +141,8 @@ const StoreUI = {
                 storeInfo.records
               );
               console.log('Saved to database:', dbResult);
+              totalNewRecords += (dbResult.new_records || 0);
+              totalDuplicates += (dbResult.duplicate_records || 0);
             } catch (dbError) {
               console.error('Database save error:', dbError);
             }
@@ -147,7 +152,12 @@ const StoreUI = {
         results.push({
           success: true,
           fileName: file.name,
-          fileInfo: fileInfo
+          fileInfo: fileInfo,
+          dbStats: {
+            newRecords: totalNewRecords,
+            duplicates: totalDuplicates,
+            saved: (saveCheckbox && saveCheckbox.checked)
+          }
         });
         
       } catch (error) {
@@ -198,6 +208,16 @@ const StoreUI = {
           html += '<span class="store-badge">' + 
             store.storeName + ' (' + store.recordCount + ' records)</span>';
         });
+        
+        if (result.dbStats && result.dbStats.saved) {
+          html += '<div class="db-stats">' +
+            '<span class="db-badge">💾 Database: ' + 
+            result.dbStats.newRecords + ' new records saved';
+          if (result.dbStats.duplicates > 0) {
+            html += ', ' + result.dbStats.duplicates + ' duplicates skipped';
+          }
+          html += '</span></div>';
+        }
         
         if (result.fileInfo.unassignedRecords > 0) {
           html += '<span class="warning-badge">⚠️ ' + 

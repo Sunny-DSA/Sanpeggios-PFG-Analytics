@@ -173,7 +173,8 @@ const StoreDataManager = {
             fileInfo.stores.push({
               storeId: storeId,
               storeName: STORE_CONFIG[storeId].name,
-              recordCount: storeData.length
+              recordCount: storeData.length,
+              records: storeData
             });
           }
           
