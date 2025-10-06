@@ -51,8 +51,9 @@ This is an advanced supply chain intelligence and cost optimization platform for
   - Created server.py to serve static files on port 5000
   - Added .gitignore for Python and common files
   - Created replit.md documentation
-  - Fixed 280 store address matching to include "Doug Baker" and "Hoover" patterns
+  - Fixed 280 store address matching to include "Doug Baker" pattern
   - Added diagnostic feature to display unassigned invoice records with address/city details
+  - Updated store identification to use Address field only (removed city-based matching)
 
 ## Running the Application
 The application runs on a Python HTTP server bound to `0.0.0.0:5000`. The server:

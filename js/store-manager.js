@@ -9,7 +9,7 @@ const STORE_CONFIG = {
     id: '280',
     name: '280 Store',
     location: 'Highway 280 Corridor',
-    addressPatterns: ['280', 'HIGHWAY 280', 'HWY 280', 'DOUG BAKER', 'HOOVER'],
+    addressPatterns: ['280', 'HIGHWAY 280', 'HWY 280', 'DOUG BAKER'],
     color: 'rgba(220, 38, 38, 0.8)' // Red
   },
   'chelsea': {
@@ -80,30 +80,20 @@ const StoreDataManager = {
     console.log('Store Data Manager initialized');
   },
   
-  // Identify store from invoice data based on address
+  // Identify store from invoice data based on address only
   identifyStore: function(row) {
     const address = (row.Address || '').toUpperCase();
-    const city = (row.City || '').toUpperCase();
-    const fullAddress = address + ' ' + city;
     
-    // Check each store's patterns
+    // Check each store's patterns against address only
     for (const storeId in STORE_CONFIG) {
       const store = STORE_CONFIG[storeId];
       for (let i = 0; i < store.addressPatterns.length; i++) {
         const pattern = store.addressPatterns[i];
-        if (fullAddress.indexOf(pattern) !== -1) {
+        if (address.indexOf(pattern) !== -1) {
           return storeId;
         }
       }
     }
-    
-    // If no match found, try alternative matching
-    // Check if address contains store location names
-    if (city.indexOf('HOOVER') !== -1) return '280';
-    if (city.indexOf('CHELSEA') !== -1) return 'chelsea';
-    if (city.indexOf('HOMEWOOD') !== -1) return 'homewood';
-    if (city.indexOf('TRUSSVILLE') !== -1) return 'trussville';
-    if (address.indexOf('VALLEYDALE') !== -1) return 'valleydale';
     
     return null; // No store identified
   },
