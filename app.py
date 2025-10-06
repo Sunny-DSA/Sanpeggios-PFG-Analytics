@@ -23,8 +23,34 @@ db.init_app(app)
 
 import models
 
-with app.app_context():
-    db.create_all()
+def init_database():
+    with app.app_context():
+        db.create_all()
+        
+        from models import Store
+        
+        stores_data = [
+            {'id': 'trussville', 'name': 'Trussville Store', 'location': 'Trussville', 'patterns': '7270 GADSDEN HWY,GADSDEN HWY'},
+            {'id': 'chelsea', 'name': 'Chelsea Store', 'location': 'Chelsea', 'patterns': '50 CHELSEA RD,CHELSEA RD'},
+            {'id': '5points', 'name': '5 Points Store', 'location': 'Five Points South', 'patterns': '1024 20TH ST S,20TH ST S'},
+            {'id': 'valleydale', 'name': 'Valleydale Store', 'location': 'Valleydale', 'patterns': '2657 VALLEYDALE RD,VALLEYDALE RD'},
+            {'id': 'homewood', 'name': 'Homewood Store', 'location': 'Homewood', 'patterns': '803 GREEN SPRINGS HWY,GREEN SPRINGS HWY'},
+            {'id': '280', 'name': '280 Store', 'location': 'Highway 280 Corridor', 'patterns': '1401 DOUG BAKER BLVD,DOUG BAKER BLVD'}
+        ]
+        
+        for store_data in stores_data:
+            existing = db.session.get(Store, store_data['id'])
+            if not existing:
+                store = Store(
+                    id=store_data['id'],
+                    name=store_data['name'],
+                    location=store_data['location'],
+                    address_patterns=store_data['patterns']
+                )
+                db.session.add(store)
+        
+        db.session.commit()
+        print("Database initialized and stores seeded successfully")
 
 @app.route('/')
 def index():
@@ -158,4 +184,5 @@ def serve_static(path):
     return send_from_directory('.', path)
 
 if __name__ == '__main__':
+    init_database()
     app.run(host='0.0.0.0', port=5000, debug=False)

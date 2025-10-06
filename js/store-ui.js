@@ -61,6 +61,12 @@ const StoreUI = {
         '<p>or click to browse</p>' +
         '<input type="file" id="multiFileInput" accept=".csv" multiple style="display: none;">' +
       '</div>' +
+      '<div class="upload-options">' +
+        '<label class="checkbox-label">' +
+          '<input type="checkbox" id="saveToDatabase" checked> ' +
+          'Save to database (data will persist across sessions)' +
+        '</label>' +
+      '</div>' +
       '<div id="uploadProgress" class="upload-progress hidden"></div>' +
       '<div id="uploadResults" class="upload-results"></div>';
     
@@ -120,6 +126,23 @@ const StoreUI = {
       try {
         const fileInfo = await StoreDataManager.processFile(file);
         successCount++;
+        
+        const saveCheckbox = document.getElementById('saveToDatabase');
+        if (saveCheckbox && saveCheckbox.checked && typeof DatabaseManager !== 'undefined') {
+          for (const storeInfo of fileInfo.stores) {
+            try {
+              const dbResult = await DatabaseManager.saveToDatabase(
+                storeInfo.storeId,
+                file.name,
+                file.size,
+                storeInfo.records
+              );
+              console.log('Saved to database:', dbResult);
+            } catch (dbError) {
+              console.error('Database save error:', dbError);
+            }
+          }
+        }
         
         results.push({
           success: true,
