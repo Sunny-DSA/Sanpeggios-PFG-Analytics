@@ -46,11 +46,13 @@ This is an advanced supply chain intelligence and cost optimization platform for
 5. **Cost Optimization**: Identifies opportunities to reduce spending through strategic substitutions
 
 ## Recent Changes
-- **2025-10-06**: Initial Replit setup
+- **2025-10-06**: Initial Replit setup and store matching improvements
   - Installed Python 3.11 for HTTP server
   - Created server.py to serve static files on port 5000
   - Added .gitignore for Python and common files
   - Created replit.md documentation
+  - Fixed 280 store address matching to include "Doug Baker" and "Hoover" patterns
+  - Added diagnostic feature to display unassigned invoice records with address/city details
 
 ## Running the Application
 The application runs on a Python HTTP server bound to `0.0.0.0:5000`. The server:

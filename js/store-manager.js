@@ -9,7 +9,7 @@ const STORE_CONFIG = {
     id: '280',
     name: '280 Store',
     location: 'Highway 280 Corridor',
-    addressPatterns: ['280', 'HIGHWAY 280', 'HWY 280'],
+    addressPatterns: ['280', 'HIGHWAY 280', 'HWY 280', 'DOUG BAKER', 'HOOVER'],
     color: 'rgba(220, 38, 38, 0.8)' // Red
   },
   'chelsea': {
@@ -99,6 +99,7 @@ const StoreDataManager = {
     
     // If no match found, try alternative matching
     // Check if address contains store location names
+    if (city.indexOf('HOOVER') !== -1) return '280';
     if (city.indexOf('CHELSEA') !== -1) return 'chelsea';
     if (city.indexOf('HOMEWOOD') !== -1) return 'homewood';
     if (city.indexOf('TRUSSVILLE') !== -1) return 'trussville';
