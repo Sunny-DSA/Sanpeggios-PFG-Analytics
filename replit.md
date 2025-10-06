@@ -15,19 +15,25 @@ This is an advanced supply chain intelligence and cost optimization platform for
 
 ### Technology Stack
 - **Frontend**: Pure HTML/CSS/JavaScript (static application)
+- **Backend**: Flask REST API with SQLAlchemy ORM
+- **Authentication**: Replit Auth (OAuth 2.0 with PKCE)
+- **Database**: PostgreSQL (user-isolated data storage)
 - **Visualization**: Chart.js with plugins (zoom, matrix charts)
 - **Data Processing**: PapaParse for CSV parsing, date-fns for date handling
-- **Server**: Python HTTP server (serves static files on port 5000)
 
 ### File Structure
 ```
 .
+├── app.py                      # Flask application with REST API routes
+├── extensions.py               # Centralized Flask extensions (db, login_manager)
+├── models.py                   # SQLAlchemy database models
+├── replit_auth.py              # Replit Auth OAuth integration
 ├── Index.html                  # Main application page
-├── server.py                   # Python HTTP server for hosting
 ├── css/
 │   └── styles.css             # Application styling
 ├── js/
 │   ├── chart-init.js          # Chart initialization and rendering
+│   ├── database.js            # Database API client
 │   ├── debug.js               # Debug utilities
 │   ├── parser.js              # CSV data parsing and analytics
 │   ├── product-analytics.js   # Product-level analysis functions
@@ -39,39 +45,49 @@ This is an advanced supply chain intelligence and cost optimization platform for
 ```
 
 ### Key Features
-1. **Multi-Store Support**: Handles data for 6 store locations (280, Chelsea, Valleydale, Homewood, Trussville, 5 Points)
-2. **Advanced Analytics**: Price spike detection, volatility analysis, budget variance tracking
-3. **Product Intelligence**: ABC analysis, brand performance, substitution recommendations
-4. **Interactive Visualizations**: Multiple chart types with drill-down capabilities
-5. **Cost Optimization**: Identifies opportunities to reduce spending through strategic substitutions
+1. **Secure User Authentication**: OAuth 2.0 login via Replit Auth (Google, GitHub, X, Apple, email/password)
+2. **User Data Isolation**: Each user sees only their own uploaded invoices and analytics
+3. **Multi-Store Support**: Handles data for 6 store locations (280, Chelsea, Valleydale, Homewood, Trussville, 5 Points)
+4. **Advanced Analytics**: Price spike detection, volatility analysis, budget variance tracking
+5. **Product Intelligence**: ABC analysis, brand performance, substitution recommendations
+6. **Interactive Visualizations**: Multiple chart types with drill-down capabilities
+7. **Cost Optimization**: Identifies opportunities to reduce spending through strategic substitutions
 
 ## Recent Changes
-- **2025-10-06**: Database integration, authentication, and deployment setup
-  - Initial Replit setup with Python 3.11 HTTP server
+- **2025-10-06**: Authentication implementation with user data isolation
+  - Restructured Flask app using extensions pattern to resolve circular imports
+  - Integrated Replit Auth OAuth 2.0 with Flask-Login for session management
+  - Protected all API endpoints with @require_login decorator
+  - Implemented user data isolation: all uploads and invoice records scoped to current_user.id
+  - Added automatic redirect to OAuth login for unauthenticated users
+  - Removed unauthenticated /api/init-stores endpoint (stores seed on startup only)
+  - Fixed duplicate detection to scope by user_id (users can have same invoices independently)
+  - Enhanced security: all stateful API routes now require authentication
+  - Production-ready authentication flow with token refresh and session persistence
+
+- **2025-10-06**: Database integration and deployment setup
+  - Initial Replit setup with Python 3.11 and Flask
   - Created PostgreSQL database with 5 tables (stores, uploads, invoice_records, users, oauth)
-  - Converted to Flask app with REST API endpoints
-  - Added automatic database seeding on startup
-  - Created frontend database save feature with checkbox (enabled by default)
-  - Implemented Replit Auth for secure user authentication (Google, GitHub, X, Apple, email/password)
-  - Fixed data persistence bug: records now properly saved to database on upload
-  - Added duplicate detection: skips records that already exist in database
+  - Added automatic database seeding on startup (stores table)
+  - Fixed data persistence: records properly saved with user_id foreign keys
   - Enhanced upload feedback: displays count of new records and duplicates skipped
   - Fixed 280 store address matching to include "Doug Baker" pattern
-  - Added diagnostic feature to display unassigned invoice records
   - Updated store identification to use Address field only (removed city-based matching)
   - Set up autoscale deployment configuration for production
 
 ## Running the Application
-The application runs on a Python HTTP server bound to `0.0.0.0:5000`. The server:
-- Serves Index.html as the default page
-- Includes cache-control headers to prevent browser caching issues
-- Serves all static assets (CSS, JS, CSV data files)
+The application runs as a Flask server bound to `0.0.0.0:5000`:
+- **Authentication Required**: Users must log in via Replit Auth to access the dashboard
+- **User Data Isolation**: Each user's uploads and analytics are private and isolated
+- **Database Seeding**: Store metadata is automatically seeded on first startup
+- **Session Management**: User sessions persist with automatic token refresh
+- Static assets (CSS, JS) are served alongside the authenticated dashboard
+
+## Security
+- **OAuth 2.0 Authentication**: All access requires Replit Auth login
+- **Protected API Endpoints**: All stateful routes require @require_login decorator
+- **User Data Scoping**: Database queries filter by current_user.id
+- **No Public Write Access**: All mutation endpoints require authentication
 
 ## User Preferences
 None recorded yet.
-
-## Notes
-- This is a client-side application with no backend API or database
-- All data processing happens in the browser using JavaScript
-- CSV data files are loaded via PapaParse
-- The application includes sample data from June 2025
