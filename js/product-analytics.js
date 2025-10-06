@@ -56,7 +56,7 @@ function analyzeProductPerformance(data) {
   // Calculate derived metrics
   Object.values(productMetrics).forEach(metric => {
     // Average price
-    metric.avgPrice = metric.totalSpend / metric.totalQty;
+    metric.avgPrice = metric.totalQty > 0 ? metric.totalSpend / metric.totalQty : 0;
     
     // Price volatility
     const prices = metric.priceHistory.map(p => p.price);
@@ -73,7 +73,7 @@ function analyzeProductPerformance(data) {
           oldPrice: prevPrice,
           newPrice: currPrice,
           change: currPrice - prevPrice,
-          changePercent: ((currPrice - prevPrice) / prevPrice) * 100
+          changePercent: prevPrice > 0 ? ((currPrice - prevPrice) / prevPrice) * 100 : 0
         });
       }
     }
@@ -110,7 +110,7 @@ function performABCAnalysis(productMetrics) {
   
   products.forEach(product => {
     cumulativeSpend += product.totalSpend;
-    const cumulativePercent = (cumulativeSpend / totalSpend) * 100;
+    const cumulativePercent = totalSpend > 0 ? (cumulativeSpend / totalSpend) * 100 : 0;
     
     if (cumulativePercent <= 80) {
       product.abcCategory = 'A';
@@ -120,7 +120,7 @@ function performABCAnalysis(productMetrics) {
       product.abcCategory = 'C';
     }
     
-    product.spendPercent = (product.totalSpend / totalSpend) * 100;
+    product.spendPercent = totalSpend > 0 ? (product.totalSpend / totalSpend) * 100 : 0;
     product.cumulativePercent = cumulativePercent;
   });
   
@@ -171,7 +171,7 @@ function analyzeBrands(data) {
   
   // Calculate derived metrics
   Object.values(brandMetrics).forEach(metric => {
-    metric.avgPrice = metric.totalSpend / metric.totalQty;
+    metric.avgPrice = metric.totalQty > 0 ? metric.totalSpend / metric.totalQty : 0;
     metric.productCount = metric.products.size;
     metric.categoryCount = metric.categories.size;
     metric.vendorCount = metric.vendors.size;
@@ -264,7 +264,7 @@ function findSubstitutionOpportunities(productMetrics) {
         const cheaper = group[0];
         const current = group[i];
         const savings = current.avgPrice - cheaper.avgPrice;
-        const savingsPercent = (savings / current.avgPrice) * 100;
+        const savingsPercent = current.avgPrice > 0 ? (savings / current.avgPrice) * 100 : 0;
         
         if (savingsPercent > 5) { // Only suggest if >5% savings
           substitutions.push({
@@ -385,7 +385,7 @@ function analyzeProductLifecycle(productMetrics) {
     const firstHalfFreq = calculateOrderFrequency(firstHalf);
     const secondHalfFreq = calculateOrderFrequency(secondHalf);
       
-      const freqChange = ((secondHalfFreq - firstHalfFreq) / firstHalfFreq) * 100;
+      const freqChange = firstHalfFreq > 0 ? ((secondHalfFreq - firstHalfFreq) / firstHalfFreq) * 100 : 0;
       
       if (freqChange > 20) {
         lifecycle.growingProducts.push({
@@ -442,7 +442,7 @@ function createProductTrendChart(productData, canvasId) {
   
   // Calculate averages
   Object.values(timeSeriesData).forEach(month => {
-    month.avgPrice = month.totalSpend / month.totalQty;
+    month.avgPrice = month.totalQty > 0 ? month.totalSpend / month.totalQty : 0;
   });
   
   const labels = Object.keys(timeSeriesData).sort();
@@ -511,6 +511,7 @@ function createProductTrendChart(productData, canvasId) {
 function calculateVolatility(values) {
   if (values.length < 2) return 0;
   const mean = average(values);
+  if (mean === 0) return 0;
   const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
   return Math.sqrt(variance) / mean;
 }

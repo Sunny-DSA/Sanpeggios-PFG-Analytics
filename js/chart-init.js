@@ -174,6 +174,12 @@ function createPriceTrendChart() {
   // Destroy existing chart
   if (charts.priceTrend) charts.priceTrend.destroy();
   
+  // Check for data
+  if (!analytics || !analytics.data || analytics.data.length === 0) {
+    showChartEmptyState(ctx, 'No data available for price trend chart');
+    return;
+  }
+  
   // Aggregate data by month and category
   const monthlyData = {};
   analytics.data.forEach(item => {
@@ -287,6 +293,12 @@ function createVolatilityChart() {
   
   if (charts.volatility) charts.volatility.destroy();
   
+  // Check for data
+  if (!analytics || !analytics.data || analytics.data.length === 0) {
+    showChartEmptyState(ctx, 'No data available for volatility chart');
+    return;
+  }
+  
   // Calculate volatility by category over time
   const volatilityData = {};
   analytics.data.forEach(item => {
@@ -344,6 +356,12 @@ function createBudgetVarianceChart() {
   if (!ctx) return;
   
   if (charts.budgetVariance) charts.budgetVariance.destroy();
+  
+  // Check for data
+  if (!analytics || !analytics.budgetVariance || Object.keys(analytics.budgetVariance).length === 0) {
+    showChartEmptyState(ctx, 'No budget variance data available');
+    return;
+  }
   
   const variances = Object.entries(analytics.budgetVariance)
     .sort((a, b) => Math.abs(b[1].variancePercent) - Math.abs(a[1].variancePercent))
@@ -405,6 +423,12 @@ function createSupplyConcentrationChart() {
   
   if (charts.concentration) charts.concentration.destroy();
   
+  // Check for data
+  if (!analytics || !analytics.supplyConcentration || !analytics.supplyConcentration.vendors || analytics.supplyConcentration.vendors.length === 0) {
+    showChartEmptyState(ctx, 'No vendor concentration data available');
+    return;
+  }
+  
   const topVendors = analytics.supplyConcentration.vendors.slice(0, 10);
   
   charts.concentration = new Chart(ctx, {
@@ -464,6 +488,12 @@ function createSpendForecastChart() {
   if (!ctx) return;
   
   if (charts.forecast) charts.forecast.destroy();
+  
+  // Check for data
+  if (!analytics || !analytics.forecastData || analytics.forecastData.length === 0) {
+    showChartEmptyState(ctx, 'Insufficient data for spend forecast');
+    return;
+  }
   
   // Historical data
   const historicalData = analytics.forecastData;
@@ -543,6 +573,12 @@ function createCategoryHeatmap() {
   if (!ctx) return;
   
   if (charts.heatmap) charts.heatmap.destroy();
+  
+  // Check for data
+  if (!analytics || !analytics.data || analytics.data.length === 0) {
+    showChartEmptyState(ctx, 'No data available for category heatmap');
+    return;
+  }
   
   // Prepare weekly data by category
   const weeklyData = {};
@@ -642,10 +678,15 @@ function setupEventListeners() {
   const volWindow = document.getElementById('volWindow');
   if (volWindow) {
     volWindow.addEventListener('change', async (e) => {
-      currentFilters.volatilityWindow = parseInt(e.target.value);
-      await refreshAnalytics();
-      createVolatilityChart();
-      updateAlertThresholds();
+      setFiltersLoading(true);
+      try {
+        currentFilters.volatilityWindow = parseInt(e.target.value);
+        await refreshAnalytics();
+        createVolatilityChart();
+        updateAlertThresholds();
+      } finally {
+        setFiltersLoading(false);
+      }
     });
   }
   
@@ -653,9 +694,14 @@ function setupEventListeners() {
   const categoryFilter = document.getElementById('categoryFilter');
   if (categoryFilter) {
     categoryFilter.addEventListener('change', async (e) => {
-      currentFilters.category = e.target.value;
-      await refreshAnalytics();
-      await initializeAllCharts();
+      setFiltersLoading(true);
+      try {
+        currentFilters.category = e.target.value;
+        await refreshAnalytics();
+        await initializeAllCharts();
+      } finally {
+        setFiltersLoading(false);
+      }
     });
   }
   
@@ -665,17 +711,45 @@ function setupEventListeners() {
   
   if (startDate) {
     startDate.addEventListener('change', async (e) => {
-      currentFilters.startDate = e.target.value;
-      await refreshAnalytics();
-      await initializeAllCharts();
+      const newStartDate = e.target.value;
+      
+      // Validate: start date should be before or equal to end date
+      if (currentFilters.endDate && newStartDate > currentFilters.endDate) {
+        showError('Start date must be before or equal to end date');
+        e.target.value = currentFilters.startDate || '';
+        return;
+      }
+      
+      setFiltersLoading(true);
+      try {
+        currentFilters.startDate = newStartDate;
+        await refreshAnalytics();
+        await initializeAllCharts();
+      } finally {
+        setFiltersLoading(false);
+      }
     });
   }
   
   if (endDate) {
     endDate.addEventListener('change', async (e) => {
-      currentFilters.endDate = e.target.value;
-      await refreshAnalytics();
-      await initializeAllCharts();
+      const newEndDate = e.target.value;
+      
+      // Validate: end date should be after or equal to start date
+      if (currentFilters.startDate && newEndDate < currentFilters.startDate) {
+        showError('End date must be after or equal to start date');
+        e.target.value = currentFilters.endDate || '';
+        return;
+      }
+      
+      setFiltersLoading(true);
+      try {
+        currentFilters.endDate = newEndDate;
+        await refreshAnalytics();
+        await initializeAllCharts();
+      } finally {
+        setFiltersLoading(false);
+      }
     });
   }
   
@@ -869,6 +943,49 @@ function displayDrillDownData(data, title) {
   
   // Show modal
   modal.style.display = 'block';
+}
+
+// Show empty state message on canvas
+function showChartEmptyState(ctx, message) {
+  // Clear the canvas
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  
+  // Draw message
+  ctx.save();
+  ctx.fillStyle = '#6B7280';
+  ctx.font = '16px system-ui, -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(message, ctx.canvas.width / 2, ctx.canvas.height / 2);
+  
+  // Draw icon
+  ctx.font = '48px system-ui, -apple-system, sans-serif';
+  ctx.fillText('📊', ctx.canvas.width / 2, ctx.canvas.height / 2 - 50);
+  ctx.restore();
+}
+
+// Set loading state for filter controls
+function setFiltersLoading(isLoading) {
+  const filterControls = [
+    'volWindow',
+    'categoryFilter',
+    'startDate',
+    'endDate'
+  ];
+  
+  filterControls.forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.disabled = isLoading;
+      if (isLoading) {
+        element.style.opacity = '0.6';
+        element.style.cursor = 'wait';
+      } else {
+        element.style.opacity = '1';
+        element.style.cursor = '';
+      }
+    }
+  });
 }
 
 // Utility functions
