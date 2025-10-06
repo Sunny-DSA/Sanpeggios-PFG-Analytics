@@ -176,8 +176,19 @@ const StoreUI = {
     // Show results
     this.showUploadResults(results, successCount, errorCount);
     
-    // Refresh current store view if files were uploaded
+    // Reload all data from database if files were uploaded and saved
     if (successCount > 0) {
+      const saveCheckbox = document.getElementById('saveToDatabase');
+      if (saveCheckbox && saveCheckbox.checked) {
+        console.log('Reloading all data from database after upload...');
+        const loadResult = await StoreDataManager.loadFromDatabase();
+        
+        if (loadResult.success) {
+          console.log('Database reload complete:', loadResult.message);
+        }
+      }
+      
+      // Refresh current store view with the reloaded data
       await this.refreshStoreView(StoreDataManager.currentStore);
       this.updateFileList(StoreDataManager.currentStore);
       this.updateStoreKPIs(StoreDataManager.currentStore);

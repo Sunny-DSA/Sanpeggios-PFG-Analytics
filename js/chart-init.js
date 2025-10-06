@@ -45,6 +45,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Wait for all dependencies to load
     await waitForDependencies();
     
+    // Load existing data from database
+    console.log('Checking for existing data in database...');
+    const loadResult = await StoreDataManager.loadFromDatabase();
+    if (loadResult.success && loadResult.recordCount > 0) {
+      console.log(`Loaded ${loadResult.recordCount} existing records from database`);
+    } else {
+      console.log('No existing data in database or load failed');
+    }
+    
     // Check if we have any data to display
     const currentStoreData = StoreDataManager.getCurrentStoreData();
     if (currentStoreData.data.length === 0) {
