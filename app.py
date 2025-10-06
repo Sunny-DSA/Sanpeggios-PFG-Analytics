@@ -91,7 +91,7 @@ def upload_invoice():
     duplicate_records = 0
     
     for record_data in records:
-        invoice_number = record_data.get('Invoice Number')
+        invoice_number = str(record_data.get('Invoice Number')) if record_data.get('Invoice Number') is not None else None
         invoice_date = record_data.get('Invoice Date')
         product_code = record_data.get('Product Code')
         
