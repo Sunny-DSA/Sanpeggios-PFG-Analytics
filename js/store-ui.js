@@ -179,6 +179,29 @@ const StoreUI = {
         if (result.fileInfo.unassignedRecords > 0) {
           html += '<span class="warning-badge">⚠️ ' + 
             result.fileInfo.unassignedRecords + ' unassigned records</span>';
+          
+          // Show diagnostic information for unassigned records
+          if (result.fileInfo.unassignedSamples && result.fileInfo.unassignedSamples.length > 0) {
+            html += '<div class="unassigned-diagnostic">' +
+              '<strong>Sample Unassigned Records (first 10):</strong>' +
+              '<table class="diagnostic-table">' +
+              '<thead><tr><th>Address</th><th>City</th><th>Customer Name</th></tr></thead>' +
+              '<tbody>';
+            
+            result.fileInfo.unassignedSamples.forEach(function(sample) {
+              html += '<tr>' +
+                '<td>' + sample.address + '</td>' +
+                '<td>' + sample.city + '</td>' +
+                '<td>' + sample.customerName + '</td>' +
+                '</tr>';
+            });
+            
+            html += '</tbody></table>' +
+              '<p class="diagnostic-help">💡 These records couldn\'t be matched to a store. ' +
+              'The store identification looks for specific patterns in the Address and City fields. ' +
+              'If you see a pattern that should match a store, you may need to update the store configuration.</p>' +
+              '</div>';
+          }
         }
         
         html += '</div></div>';

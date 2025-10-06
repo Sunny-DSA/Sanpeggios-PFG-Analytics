@@ -142,6 +142,15 @@ const StoreDataManager = {
             return;
           }
           
+          // Collect sample unassigned records for diagnostic purposes
+          const unassignedSamples = unassignedRows.slice(0, 10).map(function(row) {
+            return {
+              address: row.Address || 'N/A',
+              city: row.City || 'N/A',
+              customerName: row['Customer Name'] || 'N/A'
+            };
+          });
+          
           // Process each store's data
           const fileInfo = {
             id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
@@ -150,7 +159,8 @@ const StoreDataManager = {
             size: file.size,
             stores: [],
             totalRecords: results.data.length,
-            unassignedRecords: unassignedRows.length
+            unassignedRecords: unassignedRows.length,
+            unassignedSamples: unassignedSamples
           };
           
           // Add data to each store
