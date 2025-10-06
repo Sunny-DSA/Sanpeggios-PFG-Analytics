@@ -21,7 +21,10 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.path = '/Index.html'
         return http.server.SimpleHTTPRequestHandler.do_GET(self)
 
-with socketserver.TCPServer(("0.0.0.0", PORT), MyHTTPRequestHandler) as httpd:
+class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    daemon_threads = True
+
+with ThreadedHTTPServer(("0.0.0.0", PORT), MyHTTPRequestHandler) as httpd:
     print(f"Server running at http://0.0.0.0:{PORT}/")
     print(f"Serving files from: {os.path.abspath(DIRECTORY)}")
     httpd.serve_forever()
