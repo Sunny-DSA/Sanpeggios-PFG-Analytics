@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy import String, Integer, Float, DateTime, Text, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional
-from app import Base, db
+from extensions import Base, db
 from flask_dance.consumer.storage.sqla import OAuthConsumerMixin
 from flask_login import UserMixin
 

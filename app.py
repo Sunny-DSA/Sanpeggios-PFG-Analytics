@@ -1,14 +1,8 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
+from flask import Flask, request, jsonify, send_from_directory, redirect
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
-
-class Base(DeclarativeBase):
-    pass
-
-db = SQLAlchemy(model_class=Base)
+from extensions import db, login_manager
 
 app = Flask(__name__, static_folder='.')
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # Needed for Replit Auth url_for to generate with https
@@ -21,14 +15,17 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,
 }
 
+# Initialize extensions
 db.init_app(app)
+login_manager.init_app(app)
 
+# Import models after db is initialized
 import models
 
-# Initialize Replit Auth early (before routes)
+# Initialize Replit Auth after models
 from replit_auth import make_replit_blueprint, require_login
 from flask_login import current_user
-from flask import redirect
+from flask import url_for
 
 app.register_blueprint(make_replit_blueprint(), url_prefix="/auth")
 
@@ -66,7 +63,7 @@ def index():
     if current_user.is_authenticated:
         return send_from_directory('.', 'Index.html')
     else:
-        return redirect('/auth/login')
+        return redirect(url_for('replit_auth.login'))
 
 @app.route('/api/upload', methods=['POST'])
 @require_login
@@ -150,6 +147,7 @@ def upload_invoice():
     })
 
 @app.route('/api/stores', methods=['GET'])
+@require_login
 def get_stores():
     from models import Store
     from sqlalchemy import select
@@ -198,33 +196,6 @@ def get_records(store_id):
         'Vendor': r.vendor,
         'Vendor Code': r.vendor_code
     } for r in records])
-
-@app.route('/api/init-stores', methods=['POST'])
-def init_stores():
-    from models import Store
-    
-    stores_data = [
-        {'id': 'trussville', 'name': 'Trussville Store', 'location': 'Trussville', 'patterns': '7270 GADSDEN HWY,GADSDEN HWY'},
-        {'id': 'chelsea', 'name': 'Chelsea Store', 'location': 'Chelsea', 'patterns': '50 CHELSEA RD,CHELSEA RD'},
-        {'id': '5points', 'name': '5 Points Store', 'location': 'Five Points South', 'patterns': '1024 20TH ST S,20TH ST S'},
-        {'id': 'valleydale', 'name': 'Valleydale Store', 'location': 'Valleydale', 'patterns': '2657 VALLEYDALE RD,VALLEYDALE RD'},
-        {'id': 'homewood', 'name': 'Homewood Store', 'location': 'Homewood', 'patterns': '803 GREEN SPRINGS HWY,GREEN SPRINGS HWY'},
-        {'id': '280', 'name': '280 Store', 'location': 'Highway 280 Corridor', 'patterns': '1401 DOUG BAKER BLVD,DOUG BAKER BLVD'}
-    ]
-    
-    for store_data in stores_data:
-        existing = db.session.get(Store, store_data['id'])
-        if not existing:
-            store = Store(
-                id=store_data['id'],
-                name=store_data['name'],
-                location=store_data['location'],
-                address_patterns=store_data['patterns']
-            )
-            db.session.add(store)
-    
-    db.session.commit()
-    return jsonify({'success': True, 'message': 'Stores initialized'})
 
 @app.route('/<path:path>')
 def serve_static(path):

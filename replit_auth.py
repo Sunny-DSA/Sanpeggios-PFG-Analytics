@@ -16,9 +16,7 @@ from oauthlib.oauth2.rfc6749.errors import InvalidGrantError
 from sqlalchemy.exc import NoResultFound
 from werkzeug.local import LocalProxy
 
-from app import app, db
-
-login_manager = LoginManager(app)
+from extensions import db, login_manager
 
 
 @login_manager.user_loader
@@ -65,7 +63,8 @@ class UserSessionStorage(BaseStorage):
         db.session.commit()
 
 
-def make_replit_blueprint():
+def make_replit_blueprint(app=None):
+    from flask import current_app
     try:
         repl_id = os.environ['REPL_ID']
     except KeyError:
