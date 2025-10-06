@@ -160,7 +160,8 @@ def handle_error(blueprint, error, error_description=None, error_uri=None):
 
 
 def require_login(f):
-
+    issuer_url = os.environ.get('ISSUER_URL', "https://replit.com/oidc")
+    
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
