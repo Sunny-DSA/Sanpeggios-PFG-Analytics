@@ -286,7 +286,7 @@ const StoreDataManager = {
             storeGroups[storeId] = [];
           }
           
-          // Convert database record to internal format
+          // Convert database record to CSV-compatible format expected by analytics
           const convertedRecord = {
             'Invoice Number': record['Invoice Number'],
             'Invoice Date': record['Invoice Date'],
@@ -298,12 +298,14 @@ const StoreDataManager = {
             'Product Code': record['Product Code'],
             'Product Description': record['Product Description'],
             'Brand': record['Brand'],
-            'Category': record['Category'],
+            // Map database fields to CSV field names expected by analytics
+            'Product Class Description': record['Category'],  // Category -> Product Class Description
             'Pack Size': record['Pack Size'],
-            'Quantity': record['Quantity'],
+            'Qty Shipped': record['Quantity'],  // Quantity -> Qty Shipped
+            'Qty Ordered': record['Quantity'],  // Same as shipped for stored data
             'Unit Price': record['Unit Price'],
-            'Extended Price': record['Extended Price'],
-            'Vendor': record['Vendor'],
+            'Ext. Price': record['Extended Price'],  // Extended Price -> Ext. Price
+            'Manufacturer Name': record['Vendor'],  // Vendor -> Manufacturer Name
             'Vendor Code': record['Vendor Code']
           };
           
