@@ -1,0 +1,161 @@
+import os
+from flask import Flask, request, jsonify, send_from_directory
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
+from flask_cors import CORS
+
+class Base(DeclarativeBase):
+    pass
+
+db = SQLAlchemy(model_class=Base)
+
+app = Flask(__name__, static_folder='.')
+CORS(app)
+
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "sanpeggio-analytics-secret-key")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 300,
+    "pool_pre_ping": True,
+}
+
+db.init_app(app)
+
+import models
+
+with app.app_context():
+    db.create_all()
+
+@app.route('/')
+def index():
+    return send_from_directory('.', 'Index.html')
+
+@app.route('/api/upload', methods=['POST'])
+def upload_invoice():
+    from models import Store, Upload, InvoiceRecord
+    import json
+    
+    data = request.json
+    store_id = data.get('store_id')
+    filename = data.get('filename')
+    file_size = data.get('file_size')
+    records = data.get('records', [])
+    
+    upload = Upload(
+        store_id=store_id,
+        filename=filename,
+        file_size=file_size,
+        total_records=len(records)
+    )
+    db.session.add(upload)
+    db.session.flush()
+    
+    for record_data in records:
+        record = InvoiceRecord(
+            upload_id=upload.id,
+            store_id=store_id,
+            invoice_number=record_data.get('Invoice Number'),
+            invoice_date=record_data.get('Invoice Date'),
+            customer_name=record_data.get('Customer Name'),
+            address=record_data.get('Address'),
+            city=record_data.get('City'),
+            state=record_data.get('State'),
+            zip_code=record_data.get('Zip'),
+            product_code=record_data.get('Product Code'),
+            product_description=record_data.get('Product Description'),
+            brand=record_data.get('Brand'),
+            category=record_data.get('Category'),
+            pack_size=record_data.get('Pack Size'),
+            quantity=record_data.get('Quantity'),
+            unit_price=record_data.get('Unit Price'),
+            extended_price=record_data.get('Extended Price'),
+            vendor=record_data.get('Vendor'),
+            vendor_code=record_data.get('Vendor Code')
+        )
+        db.session.add(record)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'upload_id': upload.id,
+        'message': f'Successfully uploaded {len(records)} records'
+    })
+
+@app.route('/api/stores', methods=['GET'])
+def get_stores():
+    from models import Store
+    from sqlalchemy import select
+    stmt = select(Store)
+    stores = db.session.execute(stmt).scalars().all()
+    return jsonify([{
+        'id': s.id,
+        'name': s.name,
+        'location': s.location
+    } for s in stores])
+
+@app.route('/api/records/<store_id>', methods=['GET'])
+def get_records(store_id):
+    from models import InvoiceRecord
+    from sqlalchemy import select
+    
+    if store_id == 'all':
+        stmt = select(InvoiceRecord)
+    else:
+        stmt = select(InvoiceRecord).where(InvoiceRecord.store_id == store_id)
+    
+    records = db.session.execute(stmt).scalars().all()
+    
+    return jsonify([{
+        'Invoice Number': r.invoice_number,
+        'Invoice Date': r.invoice_date,
+        'Customer Name': r.customer_name,
+        'Address': r.address,
+        'City': r.city,
+        'State': r.state,
+        'Zip': r.zip_code,
+        'Product Code': r.product_code,
+        'Product Description': r.product_description,
+        'Brand': r.brand,
+        'Category': r.category,
+        'Pack Size': r.pack_size,
+        'Quantity': r.quantity,
+        'Unit Price': r.unit_price,
+        'Extended Price': r.extended_price,
+        'Vendor': r.vendor,
+        'Vendor Code': r.vendor_code
+    } for r in records])
+
+@app.route('/api/init-stores', methods=['POST'])
+def init_stores():
+    from models import Store
+    
+    stores_data = [
+        {'id': 'trussville', 'name': 'Trussville Store', 'location': 'Trussville', 'patterns': '7270 GADSDEN HWY,GADSDEN HWY'},
+        {'id': 'chelsea', 'name': 'Chelsea Store', 'location': 'Chelsea', 'patterns': '50 CHELSEA RD,CHELSEA RD'},
+        {'id': '5points', 'name': '5 Points Store', 'location': 'Five Points South', 'patterns': '1024 20TH ST S,20TH ST S'},
+        {'id': 'valleydale', 'name': 'Valleydale Store', 'location': 'Valleydale', 'patterns': '2657 VALLEYDALE RD,VALLEYDALE RD'},
+        {'id': 'homewood', 'name': 'Homewood Store', 'location': 'Homewood', 'patterns': '803 GREEN SPRINGS HWY,GREEN SPRINGS HWY'},
+        {'id': '280', 'name': '280 Store', 'location': 'Highway 280 Corridor', 'patterns': '1401 DOUG BAKER BLVD,DOUG BAKER BLVD'}
+    ]
+    
+    for store_data in stores_data:
+        existing = db.session.get(Store, store_data['id'])
+        if not existing:
+            store = Store(
+                id=store_data['id'],
+                name=store_data['name'],
+                location=store_data['location'],
+                address_patterns=store_data['patterns']
+            )
+            db.session.add(store)
+    
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Stores initialized'})
+
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory('.', path)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=False)
