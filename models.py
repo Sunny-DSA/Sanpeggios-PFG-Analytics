@@ -46,12 +46,14 @@ class Upload(Base):
     __tablename__ = 'uploads'
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey('users.id'))
     store_id: Mapped[str] = mapped_column(String(50), ForeignKey('stores.id'))
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     upload_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     total_records: Mapped[int] = mapped_column(Integer, default=0)
     file_size: Mapped[int] = mapped_column(Integer)
     
+    user: Mapped["User"] = relationship()
     store: Mapped["Store"] = relationship(back_populates="uploads")
     records: Mapped[list["InvoiceRecord"]] = relationship(back_populates="upload")
 
@@ -59,6 +61,7 @@ class InvoiceRecord(Base):
     __tablename__ = 'invoice_records'
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey('users.id'))
     upload_id: Mapped[int] = mapped_column(Integer, ForeignKey('uploads.id'))
     store_id: Mapped[str] = mapped_column(String(50), ForeignKey('stores.id'))
     
@@ -83,5 +86,6 @@ class InvoiceRecord(Base):
     vendor: Mapped[Optional[str]] = mapped_column(String(255))
     vendor_code: Mapped[Optional[str]] = mapped_column(String(50))
     
+    user: Mapped["User"] = relationship()
     upload: Mapped["Upload"] = relationship(back_populates="records")
     store: Mapped["Store"] = relationship(back_populates="records")

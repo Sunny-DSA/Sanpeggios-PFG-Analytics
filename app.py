@@ -56,85 +56,101 @@ def init_database():
 
 @app.route('/')
 def index():
-    return send_from_directory('.', 'Index.html')
+    from replit_auth import require_login
+    from flask_login import current_user
+    
+    @require_login
+    def protected_index():
+        return send_from_directory('.', 'Index.html')
+    
+    return protected_index()
 
 @app.route('/api/upload', methods=['POST'])
 def upload_invoice():
     from models import Store, Upload, InvoiceRecord
     from sqlalchemy import select, and_
+    from flask_login import current_user
+    from replit_auth import require_login
     import json
     
-    data = request.json
-    store_id = data.get('store_id')
-    filename = data.get('filename')
-    file_size = data.get('file_size')
-    records = data.get('records', [])
-    
-    upload = Upload(
-        store_id=store_id,
-        filename=filename,
-        file_size=file_size,
-        total_records=len(records)
-    )
-    db.session.add(upload)
-    db.session.flush()
-    
-    new_records = 0
-    duplicate_records = 0
-    
-    for record_data in records:
-        invoice_number = record_data.get('Invoice Number')
-        invoice_date = record_data.get('Invoice Date')
-        product_code = record_data.get('Product Code')
+    @require_login
+    def protected_upload():
+        data = request.json
+        store_id = data.get('store_id')
+        filename = data.get('filename')
+        file_size = data.get('file_size')
+        records = data.get('records', [])
         
-        existing = db.session.execute(
-            select(InvoiceRecord).where(
-                and_(
-                    InvoiceRecord.store_id == store_id,
-                    InvoiceRecord.invoice_number == invoice_number,
-                    InvoiceRecord.invoice_date == invoice_date,
-                    InvoiceRecord.product_code == product_code
-                )
-            )
-        ).first()
-        
-        if existing:
-            duplicate_records += 1
-            continue
-        
-        record = InvoiceRecord(
-            upload_id=upload.id,
+        upload = Upload(
+            user_id=current_user.id,
             store_id=store_id,
-            invoice_number=invoice_number,
-            invoice_date=invoice_date,
-            customer_name=record_data.get('Customer Name'),
-            address=record_data.get('Address'),
-            city=record_data.get('City'),
-            state=record_data.get('State'),
-            zip_code=record_data.get('Zip'),
-            product_code=product_code,
-            product_description=record_data.get('Product Description'),
-            brand=record_data.get('Brand'),
-            category=record_data.get('Category'),
-            pack_size=record_data.get('Pack Size'),
-            quantity=record_data.get('Quantity'),
-            unit_price=record_data.get('Unit Price'),
-            extended_price=record_data.get('Extended Price'),
-            vendor=record_data.get('Vendor'),
-            vendor_code=record_data.get('Vendor Code')
+            filename=filename,
+            file_size=file_size,
+            total_records=len(records)
         )
-        db.session.add(record)
-        new_records += 1
+        db.session.add(upload)
+        db.session.flush()
+        
+        new_records = 0
+        duplicate_records = 0
+        
+        for record_data in records:
+            invoice_number = record_data.get('Invoice Number')
+            invoice_date = record_data.get('Invoice Date')
+            product_code = record_data.get('Product Code')
+            
+            existing = db.session.execute(
+                select(InvoiceRecord).where(
+                    and_(
+                        InvoiceRecord.user_id == current_user.id,
+                        InvoiceRecord.store_id == store_id,
+                        InvoiceRecord.invoice_number == invoice_number,
+                        InvoiceRecord.invoice_date == invoice_date,
+                        InvoiceRecord.product_code == product_code
+                    )
+                )
+            ).first()
+            
+            if existing:
+                duplicate_records += 1
+                continue
+            
+            record = InvoiceRecord(
+                user_id=current_user.id,
+                upload_id=upload.id,
+                store_id=store_id,
+                invoice_number=invoice_number,
+                invoice_date=invoice_date,
+                customer_name=record_data.get('Customer Name'),
+                address=record_data.get('Address'),
+                city=record_data.get('City'),
+                state=record_data.get('State'),
+                zip_code=record_data.get('Zip'),
+                product_code=product_code,
+                product_description=record_data.get('Product Description'),
+                brand=record_data.get('Brand'),
+                category=record_data.get('Category'),
+                pack_size=record_data.get('Pack Size'),
+                quantity=record_data.get('Quantity'),
+                unit_price=record_data.get('Unit Price'),
+                extended_price=record_data.get('Extended Price'),
+                vendor=record_data.get('Vendor'),
+                vendor_code=record_data.get('Vendor Code')
+            )
+            db.session.add(record)
+            new_records += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'upload_id': upload.id,
+            'new_records': new_records,
+            'duplicate_records': duplicate_records,
+            'message': f'Successfully uploaded {new_records} new records ({duplicate_records} duplicates skipped)'
+        })
     
-    db.session.commit()
-    
-    return jsonify({
-        'success': True,
-        'upload_id': upload.id,
-        'new_records': new_records,
-        'duplicate_records': duplicate_records,
-        'message': f'Successfully uploaded {new_records} new records ({duplicate_records} duplicates skipped)'
-    })
+    return protected_upload()
 
 @app.route('/api/stores', methods=['GET'])
 def get_stores():
@@ -151,34 +167,45 @@ def get_stores():
 @app.route('/api/records/<store_id>', methods=['GET'])
 def get_records(store_id):
     from models import InvoiceRecord
-    from sqlalchemy import select
+    from sqlalchemy import select, and_
+    from flask_login import current_user
+    from replit_auth import require_login
     
-    if store_id == 'all':
-        stmt = select(InvoiceRecord)
-    else:
-        stmt = select(InvoiceRecord).where(InvoiceRecord.store_id == store_id)
+    @require_login
+    def protected_get_records():
+        if store_id == 'all':
+            stmt = select(InvoiceRecord).where(InvoiceRecord.user_id == current_user.id)
+        else:
+            stmt = select(InvoiceRecord).where(
+                and_(
+                    InvoiceRecord.user_id == current_user.id,
+                    InvoiceRecord.store_id == store_id
+                )
+            )
+        
+        records = db.session.execute(stmt).scalars().all()
+        
+        return jsonify([{
+            'Invoice Number': r.invoice_number,
+            'Invoice Date': r.invoice_date,
+            'Customer Name': r.customer_name,
+            'Address': r.address,
+            'City': r.city,
+            'State': r.state,
+            'Zip': r.zip_code,
+            'Product Code': r.product_code,
+            'Product Description': r.product_description,
+            'Brand': r.brand,
+            'Category': r.category,
+            'Pack Size': r.pack_size,
+            'Quantity': r.quantity,
+            'Unit Price': r.unit_price,
+            'Extended Price': r.extended_price,
+            'Vendor': r.vendor,
+            'Vendor Code': r.vendor_code
+        } for r in records])
     
-    records = db.session.execute(stmt).scalars().all()
-    
-    return jsonify([{
-        'Invoice Number': r.invoice_number,
-        'Invoice Date': r.invoice_date,
-        'Customer Name': r.customer_name,
-        'Address': r.address,
-        'City': r.city,
-        'State': r.state,
-        'Zip': r.zip_code,
-        'Product Code': r.product_code,
-        'Product Description': r.product_description,
-        'Brand': r.brand,
-        'Category': r.category,
-        'Pack Size': r.pack_size,
-        'Quantity': r.quantity,
-        'Unit Price': r.unit_price,
-        'Extended Price': r.extended_price,
-        'Vendor': r.vendor,
-        'Vendor Code': r.vendor_code
-    } for r in records])
+    return protected_get_records()
 
 @app.route('/api/init-stores', methods=['POST'])
 def init_stores():
