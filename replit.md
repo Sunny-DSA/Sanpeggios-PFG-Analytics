@@ -46,14 +46,16 @@ This is an advanced supply chain intelligence and cost optimization platform for
 5. **Cost Optimization**: Identifies opportunities to reduce spending through strategic substitutions
 
 ## Recent Changes
-- **2025-10-06**: Initial Replit setup and store matching improvements
-  - Installed Python 3.11 for HTTP server
-  - Created server.py to serve static files on port 5000
-  - Added .gitignore for Python and common files
-  - Created replit.md documentation
+- **2025-10-06**: Database integration and deployment setup
+  - Initial Replit setup with Python 3.11 HTTP server
+  - Created PostgreSQL database with 3 tables (stores, uploads, invoice_records)
+  - Converted to Flask app with REST API endpoints
+  - Added automatic database seeding on startup
+  - Created frontend database save feature with checkbox (enabled by default)
   - Fixed 280 store address matching to include "Doug Baker" pattern
-  - Added diagnostic feature to display unassigned invoice records with address/city details
+  - Added diagnostic feature to display unassigned invoice records
   - Updated store identification to use Address field only (removed city-based matching)
+  - Set up autoscale deployment configuration for production
 
 ## Running the Application
 The application runs on a Python HTTP server bound to `0.0.0.0:5000`. The server:
