@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 class Base(DeclarativeBase):
     pass
@@ -10,9 +11,10 @@ class Base(DeclarativeBase):
 db = SQLAlchemy(model_class=Base)
 
 app = Flask(__name__, static_folder='.')
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # Needed for Replit Auth url_for to generate with https
 CORS(app)
 
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "sanpeggio-analytics-secret-key")
+app.secret_key = os.environ.get("SESSION_SECRET")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
@@ -208,6 +210,18 @@ def init_stores():
 @app.route('/<path:path>')
 def serve_static(path):
     return send_from_directory('.', path)
+
+# Register Replit Auth blueprint after all routes are defined
+from replit_auth import make_replit_blueprint
+from flask_login import current_user
+
+app.register_blueprint(make_replit_blueprint(), url_prefix="/auth")
+
+# Make session permanent
+@app.before_request
+def make_session_permanent():
+    from flask import session
+    session.permanent = True
 
 if __name__ == '__main__':
     init_database()

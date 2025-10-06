@@ -1,9 +1,36 @@
 from datetime import datetime
-from sqlalchemy import String, Integer, Float, DateTime, Text, ForeignKey
+from sqlalchemy import String, Integer, Float, DateTime, Text, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional
-from app import Base
+from app import Base, db
+from flask_dance.consumer.storage.sqla import OAuthConsumerMixin
+from flask_login import UserMixin
 
+# Replit Auth Models (IMPORTANT: Don't drop these tables)
+class User(UserMixin, Base):
+    __tablename__ = 'users'
+    
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    email: Mapped[Optional[str]] = mapped_column(String, unique=True)
+    first_name: Mapped[Optional[str]] = mapped_column(String)
+    last_name: Mapped[Optional[str]] = mapped_column(String)
+    profile_image_url: Mapped[Optional[str]] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+class OAuth(OAuthConsumerMixin, Base):
+    __tablename__ = 'oauth'
+    
+    user_id: Mapped[str] = mapped_column(String, ForeignKey('users.id'))
+    browser_session_key: Mapped[str] = mapped_column(String, nullable=False)
+    user: Mapped["User"] = relationship()
+    
+    __table_args__ = (
+        UniqueConstraint('user_id', 'browser_session_key', 'provider', 
+                        name='uq_user_browser_session_key_provider'),
+    )
+
+# Application Models
 class Store(Base):
     __tablename__ = 'stores'
     

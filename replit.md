@@ -46,12 +46,16 @@ This is an advanced supply chain intelligence and cost optimization platform for
 5. **Cost Optimization**: Identifies opportunities to reduce spending through strategic substitutions
 
 ## Recent Changes
-- **2025-10-06**: Database integration and deployment setup
+- **2025-10-06**: Database integration, authentication, and deployment setup
   - Initial Replit setup with Python 3.11 HTTP server
-  - Created PostgreSQL database with 3 tables (stores, uploads, invoice_records)
+  - Created PostgreSQL database with 5 tables (stores, uploads, invoice_records, users, oauth)
   - Converted to Flask app with REST API endpoints
   - Added automatic database seeding on startup
   - Created frontend database save feature with checkbox (enabled by default)
+  - Implemented Replit Auth for secure user authentication (Google, GitHub, X, Apple, email/password)
+  - Fixed data persistence bug: records now properly saved to database on upload
+  - Added duplicate detection: skips records that already exist in database
+  - Enhanced upload feedback: displays count of new records and duplicates skipped
   - Fixed 280 store address matching to include "Doug Baker" pattern
   - Added diagnostic feature to display unassigned invoice records
   - Updated store identification to use Address field only (removed city-based matching)
