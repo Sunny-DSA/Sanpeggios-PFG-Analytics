@@ -248,6 +248,116 @@ const StoreDataManager = {
     return summary;
   },
   
+  // Load all records from database for current user
+  loadFromDatabase: async function() {
+    if (typeof DatabaseManager === 'undefined') {
+      console.log('Database Manager not available');
+      return { success: false, error: 'Database Manager not available' };
+    }
+    
+    try {
+      console.log('Loading records from database...');
+      
+      // Fetch all records for the user
+      const records = await DatabaseManager.getRecords('all');
+      
+      if (!records || records.length === 0) {
+        console.log('No existing records found in database');
+        return { success: true, recordCount: 0, message: 'No existing data found' };
+      }
+      
+      console.log(`Loaded ${records.length} records from database`);
+      
+      // Clear existing data
+      Object.keys(this.stores).forEach(function(storeId) {
+        this.stores[storeId].data = [];
+      }.bind(this));
+      
+      // Group records by store and convert to internal format
+      const storeGroups = {};
+      let assignedCount = 0;
+      let unassignedCount = 0;
+      
+      records.forEach(function(record) {
+        const storeId = record['Store ID'] || this.identifyStoreFromRecord(record);
+        
+        if (storeId && this.stores[storeId]) {
+          if (!storeGroups[storeId]) {
+            storeGroups[storeId] = [];
+          }
+          
+          // Convert database record to internal format
+          const convertedRecord = {
+            'Invoice Number': record['Invoice Number'],
+            'Invoice Date': record['Invoice Date'],
+            'Customer Name': record['Customer Name'],
+            'Address': record['Address'],
+            'City': record['City'],
+            'State': record['State'],
+            'Zip': record['Zip'],
+            'Product Code': record['Product Code'],
+            'Product Description': record['Product Description'],
+            'Brand': record['Brand'],
+            'Category': record['Category'],
+            'Pack Size': record['Pack Size'],
+            'Quantity': record['Quantity'],
+            'Unit Price': record['Unit Price'],
+            'Extended Price': record['Extended Price'],
+            'Vendor': record['Vendor'],
+            'Vendor Code': record['Vendor Code']
+          };
+          
+          storeGroups[storeId].push(convertedRecord);
+          assignedCount++;
+        } else {
+          unassignedCount++;
+        }
+      }.bind(this));
+      
+      // Add data to each store
+      for (const storeId in storeGroups) {
+        this.stores[storeId].data = storeGroups[storeId];
+      }
+      
+      // Update 'all' store with combined data
+      this.stores.all.data = [];
+      Object.keys(STORE_CONFIG).forEach(function(storeId) {
+        this.stores.all.data = this.stores.all.data.concat(this.stores[storeId].data);
+      }.bind(this));
+      
+      console.log(`Database load complete: ${assignedCount} records assigned to stores, ${unassignedCount} unassigned`);
+      
+      return {
+        success: true,
+        recordCount: records.length,
+        assignedCount: assignedCount,
+        unassignedCount: unassignedCount,
+        message: `Loaded ${assignedCount} records from database`
+      };
+      
+    } catch (error) {
+      console.error('Error loading from database:', error);
+      return { success: false, error: error.message };
+    }
+  },
+  
+  // Helper to identify store from database record format
+  identifyStoreFromRecord: function(record) {
+    const address = (record.Address || '').toUpperCase();
+    
+    for (const storeId in STORE_CONFIG) {
+      const store = STORE_CONFIG[storeId];
+      for (let i = 0; i < store.addressPatterns.length; i++) {
+        const pattern = store.addressPatterns[i];
+        if (address.indexOf(pattern) !== -1) {
+          return storeId;
+        }
+      }
+    }
+    
+    return null;
+  },
+  
   // Calculate store-specific KPIs
   calculateStoreKPIs: function(storeId) {
     const storeData = this.stores[storeId];
