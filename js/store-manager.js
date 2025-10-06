@@ -5,47 +5,47 @@
 
 // Store configuration with address matching patterns
 const STORE_CONFIG = {
-  '280': {
-    id: '280',
-    name: '280 Store',
-    location: 'Highway 280 Corridor',
-    addressPatterns: ['280', 'HIGHWAY 280', 'HWY 280', 'DOUG BAKER'],
-    color: 'rgba(220, 38, 38, 0.8)' // Red
+  'trussville': {
+    id: 'trussville',
+    name: 'Trussville Store',
+    location: 'Trussville',
+    addressPatterns: ['7270 GADSDEN HWY', 'GADSDEN HWY'],
+    color: 'rgba(249, 115, 22, 0.8)' // Orange
   },
   'chelsea': {
     id: 'chelsea',
     name: 'Chelsea Store',
     location: 'Chelsea',
-    addressPatterns: ['CHELSEA', '50 CHELSEA RD'],
+    addressPatterns: ['50 CHELSEA RD', 'CHELSEA RD'],
     color: 'rgba(37, 99, 235, 0.8)' // Blue
+  },
+  '5points': {
+    id: '5points',
+    name: '5 Points Store',
+    location: 'Five Points South',
+    addressPatterns: ['1024 20TH ST S', '20TH ST S'],
+    color: 'rgba(236, 72, 153, 0.8)' // Pink
   },
   'valleydale': {
     id: 'valleydale',
     name: 'Valleydale Store',
     location: 'Valleydale',
-    addressPatterns: ['VALLEYDALE'],
+    addressPatterns: ['2657 VALLEYDALE RD', 'VALLEYDALE RD'],
     color: 'rgba(16, 185, 129, 0.8)' // Green
   },
   'homewood': {
     id: 'homewood',
     name: 'Homewood Store',
     location: 'Homewood',
-    addressPatterns: ['HOMEWOOD'],
+    addressPatterns: ['803 GREEN SPRINGS HWY', 'GREEN SPRINGS HWY'],
     color: 'rgba(139, 92, 246, 0.8)' // Purple
   },
-  'trussville': {
-    id: 'trussville',
-    name: 'Trussville Store',
-    location: 'Trussville',
-    addressPatterns: ['TRUSSVILLE'],
-    color: 'rgba(249, 115, 22, 0.8)' // Orange
-  },
-  '5points': {
-    id: '5points',
-    name: '5 Points Store',
-    location: 'Five Points South',
-    addressPatterns: ['5 POINTS', 'FIVE POINTS', '5POINTS'],
-    color: 'rgba(236, 72, 153, 0.8)' // Pink
+  '280': {
+    id: '280',
+    name: '280 Store',
+    location: 'Highway 280 Corridor',
+    addressPatterns: ['1401 DOUG BAKER BLVD', 'DOUG BAKER BLVD'],
+    color: 'rgba(220, 38, 38, 0.8)' // Red
   }
 };
 
