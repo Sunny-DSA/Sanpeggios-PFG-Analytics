@@ -50,20 +50,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadResult = await StoreDataManager.loadFromDatabase();
     if (loadResult.success && loadResult.recordCount > 0) {
       console.log(`Loaded ${loadResult.recordCount} existing records from database`);
+      
+      // Check if we have any data to display after loading
+      const currentStoreData = StoreDataManager.getCurrentStoreData();
+      if (currentStoreData.data.length === 0) {
+        console.log('No data available yet. Waiting for file uploads.');
+        StoreUI.showEmptyStoreMessage('all');
+        return;
+      }
+      
+      // Load and analyze data
+      await refreshAnalytics();
     } else {
       console.log('No existing data in database or load failed');
+      
+      // Still check if data is available (shouldn't be, but just in case)
+      const currentStoreData = StoreDataManager.getCurrentStoreData();
+      if (currentStoreData.data.length === 0) {
+        console.log('No data available yet. Waiting for file uploads.');
+        StoreUI.showEmptyStoreMessage('all');
+        return;
+      }
+      
+      // Load and analyze data if somehow available
+      await refreshAnalytics();
     }
-    
-    // Check if we have any data to display
-    const currentStoreData = StoreDataManager.getCurrentStoreData();
-    if (currentStoreData.data.length === 0) {
-      console.log('No data available yet. Waiting for file uploads.');
-      StoreUI.showEmptyStoreMessage('all');
-      return;
-    }
-    
-    // Load and analyze data
-    await refreshAnalytics();
     
     // Set up event listeners
     setupEventListeners();

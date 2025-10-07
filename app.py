@@ -32,9 +32,9 @@ app.register_blueprint(make_replit_blueprint(), url_prefix="/auth")
 def init_database():
     with app.app_context():
         db.create_all()
-        
+
         from models import Store
-        
+
         stores_data = [
             {'id': 'trussville', 'name': 'Trussville Store', 'location': 'Trussville', 'patterns': '7270 GADSDEN HWY,GADSDEN HWY'},
             {'id': 'chelsea', 'name': 'Chelsea Store', 'location': 'Chelsea', 'patterns': '50 CHELSEA RD,CHELSEA RD'},
@@ -43,7 +43,7 @@ def init_database():
             {'id': 'homewood', 'name': 'Homewood Store', 'location': 'Homewood', 'patterns': '803 GREEN SPRINGS HWY,GREEN SPRINGS HWY'},
             {'id': '280', 'name': '280 Store', 'location': 'Highway 280 Corridor', 'patterns': '1401 DOUG BAKER BLVD,DOUG BAKER BLVD'}
         ]
-        
+
         for store_data in stores_data:
             existing = db.session.get(Store, store_data['id'])
             if not existing:
@@ -54,7 +54,7 @@ def init_database():
                     address_patterns=store_data['patterns']
                 )
                 db.session.add(store)
-        
+
         db.session.commit()
         print("Database initialized and stores seeded successfully")
 
@@ -70,13 +70,13 @@ def index():
 def upload_invoice():
     from models import Store, Upload, InvoiceRecord
     from sqlalchemy import select, and_
-    
+
     data = request.json
     store_id = data.get('store_id')
     filename = data.get('filename')
     file_size = data.get('file_size')
     records = data.get('records', [])
-    
+
     upload = Upload(
         user_id=current_user.id,
         store_id=store_id,
@@ -86,15 +86,15 @@ def upload_invoice():
     )
     db.session.add(upload)
     db.session.flush()
-    
+
     new_records = 0
     duplicate_records = 0
-    
+
     for record_data in records:
         invoice_number = str(record_data.get('Invoice Number')) if record_data.get('Invoice Number') is not None else None
         invoice_date = record_data.get('Invoice Date')
         product_code = record_data.get('Product Code')
-        
+
         existing = db.session.execute(
             select(InvoiceRecord).where(
                 and_(
@@ -106,11 +106,11 @@ def upload_invoice():
                 )
             )
         ).first()
-        
+
         if existing:
             duplicate_records += 1
             continue
-        
+
         record = InvoiceRecord(
             user_id=current_user.id,
             upload_id=upload.id,
@@ -135,9 +135,9 @@ def upload_invoice():
         )
         db.session.add(record)
         new_records += 1
-    
+
     db.session.commit()
-    
+
     return jsonify({
         'success': True,
         'upload_id': upload.id,
@@ -159,24 +159,22 @@ def get_stores():
         'location': s.location
     } for s in stores])
 
-@app.route('/api/records/<store_id>', methods=['GET'])
+@app.route('/api/records/<store_id>')
 @require_login
 def get_records(store_id):
-    from models import InvoiceRecord
-    from sqlalchemy import select, and_
-    
+    """Get all invoice records for a specific store"""
+    print(f"Fetching records for user_id={current_user.id}, store_id={store_id}")
+
     if store_id == 'all':
-        stmt = select(InvoiceRecord).where(InvoiceRecord.user_id == current_user.id)
+        records = InvoiceRecord.query.filter_by(user_id=current_user.id).all()
     else:
-        stmt = select(InvoiceRecord).where(
-            and_(
-                InvoiceRecord.user_id == current_user.id,
-                InvoiceRecord.store_id == store_id
-            )
-        )
-    
-    records = db.session.execute(stmt).scalars().all()
-    
+        records = InvoiceRecord.query.filter_by(
+            user_id=current_user.id,
+            store_id=store_id
+        ).all()
+
+    print(f"Found {len(records)} records")
+
     return jsonify([{
         'Invoice Number': r.invoice_number,
         'Invoice Date': r.invoice_date,
