@@ -26,381 +26,462 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
-        <header>
-            <h1>🍕 Sanpeggio's PFG Analytics V3</h1>
-            <p class="subtitle">Advanced Supply Chain Intelligence & Cost Optimization Platform</p>
-        </header>
-
-        <!-- Store Navigation Tabs -->
-        <nav class="nav-tabs">
-            <button class="nav-tab active" data-store="all">All Stores</button>
-            <button class="nav-tab" data-store="280">280 Store</button>
-            <button class="nav-tab" data-store="chelsea">Chelsea Store</button>
-            <button class="nav-tab" data-store="valleydale">Valleydale Store</button>
-            <button class="nav-tab" data-store="homewood">Homewood Store</button>
-            <button class="nav-tab" data-store="trussville">Trussville Store</button>
-            <button class="nav-tab" data-store="5points">5 Points Store</button>
+        <!-- Mobile Toggle Button -->
+        <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+        
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar-nav" id="sidebarNav">
+            <div class="sidebar-header">
+                <h2>🍕 PFG Analytics V3</h2>
+            </div>
+            <div class="sidebar-tabs">
+                <button class="sidebar-tab active" onclick="showTab('overview')" data-tab="overview">
+                    <span class="sidebar-tab-icon">📊</span>
+                    <span>Overview</span>
+                </button>
+                <button class="sidebar-tab" onclick="showTab('price-analytics')" data-tab="price-analytics">
+                    <span class="sidebar-tab-icon">📈</span>
+                    <span>Price Analytics</span>
+                </button>
+                <button class="sidebar-tab" onclick="showTab('supply-chain')" data-tab="supply-chain">
+                    <span class="sidebar-tab-icon">🏭</span>
+                    <span>Supply Chain</span>
+                </button>
+                <button class="sidebar-tab" onclick="showTab('category-insights')" data-tab="category-insights">
+                    <span class="sidebar-tab-icon">📊</span>
+                    <span>Category Insights</span>
+                </button>
+                <button class="sidebar-tab" onclick="showTab('product-intelligence')" data-tab="product-intelligence">
+                    <span class="sidebar-tab-icon">📦</span>
+                    <span>Product Intelligence</span>
+                </button>
+                <button class="sidebar-tab" onclick="showTab('brand-analysis')" data-tab="brand-analysis">
+                    <span class="sidebar-tab-icon">🏷️</span>
+                    <span>Brand Analysis</span>
+                </button>
+                <button class="sidebar-tab" onclick="showTab('optimization')" data-tab="optimization">
+                    <span class="sidebar-tab-icon">💡</span>
+                    <span>Cost Optimization</span>
+                </button>
+                <button class="sidebar-tab" onclick="showTab('settings')" data-tab="settings">
+                    <span class="sidebar-tab-icon">⚙️</span>
+                    <span>Settings & Alerts</span>
+                </button>
+                <button class="sidebar-tab" onclick="showTab('export')" data-tab="export">
+                    <span class="sidebar-tab-icon">📤</span>
+                    <span>Export & Reports</span>
+                </button>
+                <button class="sidebar-tab" onclick="showTab('data-management')" data-tab="data-management">
+                    <span class="sidebar-tab-icon">📁</span>
+                    <span>Data Management</span>
+                </button>
+            </div>
         </nav>
+        
+        <!-- Overlay for mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+        
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Header -->
+            <header>
+                <h1>🍕 Sanpeggio's PFG Analytics V3</h1>
+                <p class="subtitle">Advanced Supply Chain Intelligence & Cost Optimization Platform</p>
+            </header>
 
-        <!-- Summary Statistics -->
-        <section class="section">
-            <h2>📊 Dashboard Overview</h2>
-            <div class="stats-grid">
-                <div class="stat-card primary">
-                    <div class="value" id="totalSpend">$0</div>
-                    <div class="label">Total Spend</div>
-                </div>
-                <div class="stat-card">
-                    <div class="value" id="totalRecords">0</div>
-                    <div class="label">Invoice Records</div>
-                </div>
-                <div class="stat-card">
-                    <div class="value" id="uniqueCategories">0</div>
-                    <div class="label">Categories</div>
-                </div>
-                <div class="stat-card">
-                    <div class="value" id="uniqueVendors">0</div>
-                    <div class="label">Vendors</div>
-                </div>
-                <div class="stat-card">
-                    <div class="value" id="spikeCount">0</div>
-                    <div class="label">Price Spikes</div>
-                </div>
-                <div class="stat-card">
-                    <div class="value" id="dateRange">-</div>
-                    <div class="label">Date Range</div>
-                </div>
-            </div>
-        </section>
+            <!-- Store Navigation Tabs -->
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-store="all">All Stores</button>
+                <button class="nav-tab" data-store="280">280 Store</button>
+                <button class="nav-tab" data-store="chelsea">Chelsea Store</button>
+                <button class="nav-tab" data-store="valleydale">Valleydale Store</button>
+                <button class="nav-tab" data-store="homewood">Homewood Store</button>
+                <button class="nav-tab" data-store="trussville">Trussville Store</button>
+                <button class="nav-tab" data-store="5points">5 Points Store</button>
+            </nav>
 
-        <!-- Alert Container -->
-        <div id="alertContainer" class="alert-container"></div>
+            <!-- Alert Container -->
+            <div id="alertContainer" class="alert-container"></div>
 
-        <!-- Controls Section (Sprint 2) -->
-        <section class="controls-section">
-            <h3>🎛️ Analysis Controls</h3>
-            <div class="control-group">
-                <label>
-                    Volatility Window:
-                    <select id="volWindow">
-                        <option value="7">7 days</option>
-                        <option value="14">14 days</option>
-                        <option value="30" selected>30 days</option>
-                        <option value="60">60 days</option>
-                        <option value="90">90 days</option>
-                    </select>
-                </label>
-                
-                <label>
-                    Category Filter:
-                    <select id="categoryFilter">
-                        <option value="all">All Categories</option>
-                    </select>
-                </label>
-                
-                <label>
-                    Start Date:
-                    <input type="month" id="startDate" min="2020-01" max="2025-12">
-                </label>
-                
-                <label>
-                    End Date:
-                    <input type="month" id="endDate" min="2020-01" max="2025-12">
-                </label>
-                
-                <button class="btn btn-primary" onclick="refreshAnalytics()">
-                    🔄 Update Analysis
-                </button>
-            </div>
-        </section>
-
-        <!-- Main Charts Grid -->
-        <div class="grid grid-2">
-            <!-- Sprint 1: Price Trend Chart with Spikes -->
-            <section class="section">
-                <h2>📈 Price Trends & Spike Detection</h2>
-                <div class="chart-container">
-                    <canvas id="priceTrendChart"></canvas>
-                </div>
-                <div id="priceTrendSummary" class="mt-2"></div>
-                <p class="text-small text-muted">
-                    Weekly price trends with 4-week moving averages when sufficient data is available. 
-                    Red/Green markers indicate price spikes above/below normal range.
-                    Click on data points to drill down into invoice details.
-                </p>
-            </section>
-
-            <!-- Sprint 2: Volatility Analysis -->
-            <section class="section">
-                <h2>📊 Price Volatility Analysis</h2>
-                <div class="chart-container">
-                    <canvas id="volatilityChart"></canvas>
-                </div>
-                <p class="text-small text-muted">
-                    Coefficient of Variation (%) shows price stability. Higher values indicate more volatile pricing.
-                </p>
-            </section>
-        </div>
-
-        <!-- Sprint 2: Budget Variance -->
-        <section class="section">
-            <h2>💰 Budget Variance Report</h2>
-            <div class="chart-container small">
-                <canvas id="budgetVarianceChart"></canvas>
-            </div>
-            <div id="budgetTable" class="mt-2"></div>
-        </section>
-
-        <div class="grid grid-2">
-            <!-- Sprint 3: Supply Concentration -->
-            <section class="section">
-                <h2>🏭 Vendor Concentration Analysis</h2>
-                <div class="chart-container">
-                    <canvas id="concentrationChart"></canvas>
-                </div>
-                <div id="concentrationMetrics" class="mt-2"></div>
-            </section>
-
-            <!-- Sprint 3: Spend Forecast -->
-            <section class="section">
-                <h2>🔮 Spend Forecast</h2>
-                <div class="chart-container">
-                    <canvas id="forecastChart"></canvas>
-                </div>
-                <p class="text-small text-muted">
-                    3-month forecast based on historical trends. Dashed line indicates projected values.
-                </p>
-            </section>
-        </div>
-
-        <!-- Sprint 4: Category Spending Trends -->
-        <section class="section">
-            <h2>📊 Category Spending Trends</h2>
-            <div class="chart-container large">
-                <canvas id="categoryHeatmap"></canvas>
-            </div>
-            <p class="text-small text-muted">
-                Monthly spending trends by category. Shows spending patterns and helps identify budget allocation opportunities.
-            </p>
-        </section>
-
-        <!-- Product Analytics Section -->
-        <section class="section">
-            <h2>📦 Product Analytics Dashboard</h2>
-            
-            <!-- Data Quality Indicators -->
-            <div id="dataQualityIndicators" class="mb-3"></div>
-            
-            <!-- Product Search -->
-            <div class="control-group mb-3">
-                <label style="flex: 1; position: relative;">
-                    Product Search:
-                    <input type="text" id="productSearch" placeholder="Search for products..." style="width: 100%;">
-                    <div id="searchResults" class="search-results"></div>
-                </label>
-            </div>
-            
-            <!-- ABC Analysis -->
-            <div class="grid grid-2 mb-3">
-                <div>
-                    <h3>📊 ABC Analysis - Pareto Chart</h3>
-                    <div class="chart-container">
-                        <canvas id="abcChart"></canvas>
+            <!-- Tab Content: Overview -->
+            <div id="overview" class="tab-content active">
+                <!-- Summary Statistics -->
+                <section class="section">
+                    <h2>📊 Dashboard Overview</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card primary">
+                            <div class="value" id="totalSpend">$0</div>
+                            <div class="label">Total Spend</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="totalRecords">0</div>
+                            <div class="label">Invoice Records</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="uniqueCategories">0</div>
+                            <div class="label">Categories</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="uniqueVendors">0</div>
+                            <div class="label">Vendors</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="spikeCount">0</div>
+                            <div class="label">Price Spikes</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="value" id="dateRange">-</div>
+                            <div class="label">Date Range</div>
+                        </div>
                     </div>
-                </div>
-                
-                <!-- Product Lifecycle -->
-                <div>
-                    <h3>🔄 Product Lifecycle Distribution</h3>
-                    <div class="chart-container">
-                        <canvas id="lifecycleChart"></canvas>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Pack Size Optimization and Vendor Diversification -->
-            <div class="grid grid-2 mb-3">
-                <div>
-                    <h3>📦 Pack Size Optimization</h3>
-                    <div class="chart-container">
-                        <canvas id="packSizeChart"></canvas>
-                    </div>
-                    <p class="text-small text-muted">
-                        Cost per unit across different pack sizes. Lower bars indicate better value.
-                    </p>
-                </div>
-                
-                <div>
-                    <h3>🏭 Vendor Diversification by Category</h3>
-                    <div class="chart-container">
-                        <canvas id="vendorDiversificationChart"></canvas>
-                    </div>
-                    <p class="text-small text-muted">
-                        Higher scores indicate better vendor diversification (less risk).
-                    </p>
-                </div>
-            </div>
-            
-            <!-- Top Products Table with Filters -->
-            <div class="mb-3">
-                <h3>🏆 Top Products by Spend</h3>
-                <div class="control-group mb-2">
-                    <label>
-                        Filter by Category:
-                        <select id="productCategoryFilter">
-                            <option value="all">All Categories</option>
-                        </select>
-                    </label>
-                    <label>
-                        Filter by Brand:
-                        <select id="productBrandFilter">
-                            <option value="all">All Brands</option>
-                        </select>
-                    </label>
-                    <label>
-                        Filter by ABC:
-                        <select id="productABCFilter">
-                            <option value="all">All Classifications</option>
-                            <option value="A">A Items (Top 80%)</option>
-                            <option value="B">B Items (80-95%)</option>
-                            <option value="C">C Items (95-100%)</option>
-                        </select>
-                    </label>
-                    <button class="btn btn-secondary btn-small" onclick="resetProductFilters()">Reset Filters</button>
-                </div>
-                <div id="topProductsTable"></div>
-            </div>
-        </section>
+                </section>
 
-        <!-- Brand Analytics Section -->
-        <section class="section">
-            <h2>🏷️ Brand Performance Analysis</h2>
-            
-            <div class="grid grid-2 mb-3">
-                <!-- Brand Performance Bubble Chart -->
-                <div>
-                    <h3>💰 Brand Value Analysis</h3>
-                    <div class="chart-container">
-                        <canvas id="brandChart"></canvas>
+                <!-- Controls Section -->
+                <section class="controls-section">
+                    <h3>🎛️ Analysis Controls</h3>
+                    <div class="control-group">
+                        <label>
+                            Volatility Window:
+                            <select id="volWindow">
+                                <option value="7">7 days</option>
+                                <option value="14">14 days</option>
+                                <option value="30" selected>30 days</option>
+                                <option value="60">60 days</option>
+                                <option value="90">90 days</option>
+                            </select>
+                        </label>
+                        
+                        <label>
+                            Category Filter:
+                            <select id="categoryFilter">
+                                <option value="all">All Categories</option>
+                            </select>
+                        </label>
+                        
+                        <label>
+                            Start Date:
+                            <input type="month" id="startDate" min="2020-01" max="2025-12">
+                        </label>
+                        
+                        <label>
+                            End Date:
+                            <input type="month" id="endDate" min="2020-01" max="2025-12">
+                        </label>
+                        
+                        <button class="btn btn-primary" onclick="refreshAnalytics()">
+                            🔄 Update Analysis
+                        </button>
                     </div>
-                    <p class="text-small text-muted">
-                        Each brand has a unique color. Bubble size represents product variety. Click bubbles for details.
-                    </p>
-                </div>
-                
-                <!-- Brand Comparison Radar -->
-                <div>
-                    <h3>📊 Brand Comparison</h3>
-                    <div class="chart-container">
-                        <canvas id="brandComparisonChart"></canvas>
-                    </div>
-                    <p class="text-small text-muted">
-                        Multi-dimensional brand comparison. Click to view brand details.
-                    </p>
-                </div>
+                </section>
             </div>
-            
-            <div class="grid grid-2 mb-3">
-                <!-- Brand Market Share -->
-                <div>
-                    <h3>📊 Brand Market Share</h3>
+
+            <!-- Tab Content: Price Analytics -->
+            <div id="price-analytics" class="tab-content">
+                <div class="grid grid-2">
+                    <!-- Price Trend Chart with Spikes -->
+                    <section class="section">
+                        <h2>📈 Price Trends & Spike Detection</h2>
+                        <div class="chart-container">
+                            <canvas id="priceTrendChart"></canvas>
+                        </div>
+                        <div id="priceTrendSummary" class="mt-2"></div>
+                        <p class="text-small text-muted">
+                            Weekly price trends with 4-week moving averages when sufficient data is available. 
+                            Red/Green markers indicate price spikes above/below normal range.
+                            Click on data points to drill down into invoice details.
+                        </p>
+                    </section>
+
+                    <!-- Volatility Analysis -->
+                    <section class="section">
+                        <h2>📊 Price Volatility Analysis</h2>
+                        <div class="chart-container">
+                            <canvas id="volatilityChart"></canvas>
+                        </div>
+                        <p class="text-small text-muted">
+                            Coefficient of Variation (%) shows price stability. Higher values indicate more volatile pricing.
+                        </p>
+                    </section>
+                </div>
+
+                <!-- Budget Variance -->
+                <section class="section">
+                    <h2>💰 Budget Variance Report</h2>
                     <div class="chart-container small">
-                        <canvas id="brandMarketShareChart"></canvas>
+                        <canvas id="budgetVarianceChart"></canvas>
                     </div>
-                </div>
-                
-                <!-- Brand Summary Table -->
-                <div>
-                    <h3>📋 Brand Performance Summary</h3>
-                    <div id="brandSummaryTable" style="max-height: 300px; overflow-y: auto;"></div>
-                </div>
+                    <div id="budgetTable" class="mt-2"></div>
+                </section>
             </div>
-        </section>
 
-        <!-- Cost Optimization Section -->
-        <section class="section">
-            <h2>💡 Cost Optimization Opportunities</h2>
-            
-            <div class="mb-3">
-                <h3>🔄 Product Substitution Recommendations</h3>
-                <div id="substitutionTable"></div>
-            </div>
-            
-            <div class="alert alert-info">
-                <strong>💰 Total Potential Savings:</strong> 
-                <span id="totalPotentialSavings">Calculating...</span> annually through strategic substitutions
-            </div>
-        </section>
+            <!-- Tab Content: Supply Chain -->
+            <div id="supply-chain" class="tab-content">
+                <div class="grid grid-2">
+                    <!-- Supply Concentration -->
+                    <section class="section">
+                        <h2>🏭 Vendor Concentration Analysis</h2>
+                        <div class="chart-container">
+                            <canvas id="concentrationChart"></canvas>
+                        </div>
+                        <div id="concentrationMetrics" class="mt-2"></div>
+                    </section>
 
-        <!-- Settings Panel (Sprint 2 & 4) -->
-        <section class="section">
-            <h2>⚙️ Alert Configuration & Settings</h2>
-            <div class="settings-panel">
-                <div class="settings-group">
-                    <h4>Alert Thresholds</h4>
-                    <div class="settings-row">
-                        <label>Price Spike Z-Score Threshold:</label>
-                        <input type="number" id="threshZ" value="2" min="1" max="5" step="0.5">
-                    </div>
-                    <div class="settings-row">
-                        <label>Budget Variance % Threshold:</label>
-                        <input type="number" id="threshVar" value="10" min="5" max="50" step="5">
-                    </div>
-                    <div class="settings-row">
-                        <label>Vendor Concentration % Threshold:</label>
-                        <input type="number" id="threshConc" value="40" min="20" max="80" step="5">
-                    </div>
-                </div>
-                
-                <div class="settings-group">
-                    <h4>Email Notifications</h4>
-                    <div class="settings-row">
-                        <label>Enable Email Alerts:</label>
-                        <input type="checkbox" id="emailEnabled">
-                    </div>
-                    <div class="settings-row">
-                        <label>Recipients (comma-separated):</label>
-                        <input type="email" id="emailRecipients" placeholder="owner@sanpeggios.com, manager@sanpeggios.com" style="width: 400px;">
-                    </div>
-                </div>
-                
-                <div class="btn-group">
-                    <button class="btn btn-success" id="saveSettings">💾 Save Settings</button>
-                    <button class="btn btn-secondary" onclick="AlertConfig.load()">🔄 Reset to Defaults</button>
+                    <!-- Spend Forecast -->
+                    <section class="section">
+                        <h2>🔮 Spend Forecast</h2>
+                        <div class="chart-container">
+                            <canvas id="forecastChart"></canvas>
+                        </div>
+                        <p class="text-small text-muted">
+                            3-month forecast based on historical trends. Dashed line indicates projected values.
+                        </p>
+                    </section>
                 </div>
             </div>
-        </section>
 
-        <!-- Export & Actions (Sprint 4) -->
-        <section class="section">
-            <h2>📤 Export & Actions</h2>
-            <div class="btn-group">
-                <button class="btn btn-primary" id="exportCsv">
-                    📊 Export to CSV
-                </button>
-                <button class="btn btn-primary" onclick="window.print()">
-                    🖨️ Print Report
-                </button>
-                <button class="btn btn-primary" onclick="generatePDFReport()">
-                    📄 Generate PDF Report
-                </button>
-                <button class="btn btn-secondary" onclick="scheduleReport()">
-                    📅 Schedule Reports
-                </button>
+            <!-- Tab Content: Category Insights -->
+            <div id="category-insights" class="tab-content">
+                <!-- Category Spending Trends -->
+                <section class="section">
+                    <h2>📊 Category Spending Trends</h2>
+                    <div class="chart-container large">
+                        <canvas id="categoryHeatmap"></canvas>
+                    </div>
+                    <p class="text-small text-muted">
+                        Monthly spending trends by category. Shows spending patterns and helps identify budget allocation opportunities.
+                    </p>
+                </section>
             </div>
-        </section>
 
-        <!-- Data Upload Section -->
-        <section class="section">
-            <h2>📁 Data Management</h2>
-            <div class="upload-area">
-                <!-- Upload UI will be created by store-ui.js -->
+            <!-- Tab Content: Product Intelligence -->
+            <div id="product-intelligence" class="tab-content">
+                <section class="section">
+                    <h2>📦 Product Analytics Dashboard</h2>
+                    
+                    <!-- Data Quality Indicators -->
+                    <div id="dataQualityIndicators" class="mb-3"></div>
+                    
+                    <!-- Product Search -->
+                    <div class="control-group mb-3">
+                        <label style="flex: 1; position: relative;">
+                            Product Search:
+                            <input type="text" id="productSearch" placeholder="Search for products..." style="width: 100%;">
+                            <div id="searchResults" class="search-results"></div>
+                        </label>
+                    </div>
+                    
+                    <!-- ABC Analysis -->
+                    <div class="grid grid-2 mb-3">
+                        <div>
+                            <h3>📊 ABC Analysis - Pareto Chart</h3>
+                            <div class="chart-container">
+                                <canvas id="abcChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Product Lifecycle -->
+                        <div>
+                            <h3>🔄 Product Lifecycle Distribution</h3>
+                            <div class="chart-container">
+                                <canvas id="lifecycleChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Pack Size Optimization and Vendor Diversification -->
+                    <div class="grid grid-2 mb-3">
+                        <div>
+                            <h3>📦 Pack Size Optimization</h3>
+                            <div class="chart-container">
+                                <canvas id="packSizeChart"></canvas>
+                            </div>
+                            <p class="text-small text-muted">
+                                Cost per unit across different pack sizes. Lower bars indicate better value.
+                            </p>
+                        </div>
+                        
+                        <div>
+                            <h3>🏭 Vendor Diversification by Category</h3>
+                            <div class="chart-container">
+                                <canvas id="vendorDiversificationChart"></canvas>
+                            </div>
+                            <p class="text-small text-muted">
+                                Higher scores indicate better vendor diversification (less risk).
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Top Products Table with Filters -->
+                    <div class="mb-3">
+                        <h3>🏆 Top Products by Spend</h3>
+                        <div class="control-group mb-2">
+                            <label>
+                                Filter by Category:
+                                <select id="productCategoryFilter">
+                                    <option value="all">All Categories</option>
+                                </select>
+                            </label>
+                            <label>
+                                Filter by Brand:
+                                <select id="productBrandFilter">
+                                    <option value="all">All Brands</option>
+                                </select>
+                            </label>
+                            <label>
+                                Filter by ABC:
+                                <select id="productABCFilter">
+                                    <option value="all">All Classifications</option>
+                                    <option value="A">A Items (Top 80%)</option>
+                                    <option value="B">B Items (80-95%)</option>
+                                    <option value="C">C Items (95-100%)</option>
+                                </select>
+                            </label>
+                            <button class="btn btn-secondary btn-small" onclick="resetProductFilters()">Reset Filters</button>
+                        </div>
+                        <div id="topProductsTable"></div>
+                    </div>
+                </section>
             </div>
-        </section>
+
+            <!-- Tab Content: Brand Analysis -->
+            <div id="brand-analysis" class="tab-content">
+                <section class="section">
+                    <h2>🏷️ Brand Performance Analysis</h2>
+                    
+                    <div class="grid grid-2 mb-3">
+                        <!-- Brand Performance Bubble Chart -->
+                        <div>
+                            <h3>💰 Brand Value Analysis</h3>
+                            <div class="chart-container">
+                                <canvas id="brandChart"></canvas>
+                            </div>
+                            <p class="text-small text-muted">
+                                Each brand has a unique color. Bubble size represents product variety. Click bubbles for details.
+                            </p>
+                        </div>
+                        
+                        <!-- Brand Comparison Radar -->
+                        <div>
+                            <h3>📊 Brand Comparison</h3>
+                            <div class="chart-container">
+                                <canvas id="brandComparisonChart"></canvas>
+                            </div>
+                            <p class="text-small text-muted">
+                                Multi-dimensional brand comparison. Click to view brand details.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-2 mb-3">
+                        <!-- Brand Market Share -->
+                        <div>
+                            <h3>📊 Brand Market Share</h3>
+                            <div class="chart-container small">
+                                <canvas id="brandMarketShareChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Brand Summary Table -->
+                        <div>
+                            <h3>📋 Brand Performance Summary</h3>
+                            <div id="brandSummaryTable" style="max-height: 300px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Tab Content: Cost Optimization -->
+            <div id="optimization" class="tab-content">
+                <section class="section">
+                    <h2>💡 Cost Optimization Opportunities</h2>
+                    
+                    <div class="mb-3">
+                        <h3>🔄 Product Substitution Recommendations</h3>
+                        <div id="substitutionTable"></div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <strong>💰 Total Potential Savings:</strong> 
+                        <span id="totalPotentialSavings">Calculating...</span> annually through strategic substitutions
+                    </div>
+                </section>
+            </div>
+
+            <!-- Tab Content: Settings -->
+            <div id="settings" class="tab-content">
+                <section class="section">
+                    <h2>⚙️ Alert Configuration & Settings</h2>
+                    <div class="settings-panel">
+                        <div class="settings-group">
+                            <h4>Alert Thresholds</h4>
+                            <div class="settings-row">
+                                <label>Price Spike Z-Score Threshold:</label>
+                                <input type="number" id="threshZ" value="2" min="1" max="5" step="0.5">
+                            </div>
+                            <div class="settings-row">
+                                <label>Budget Variance % Threshold:</label>
+                                <input type="number" id="threshVar" value="10" min="5" max="50" step="5">
+                            </div>
+                            <div class="settings-row">
+                                <label>Vendor Concentration % Threshold:</label>
+                                <input type="number" id="threshConc" value="40" min="20" max="80" step="5">
+                            </div>
+                        </div>
+                        
+                        <div class="settings-group">
+                            <h4>Email Notifications</h4>
+                            <div class="settings-row">
+                                <label>Enable Email Alerts:</label>
+                                <input type="checkbox" id="emailEnabled">
+                            </div>
+                            <div class="settings-row">
+                                <label>Recipients (comma-separated):</label>
+                                <input type="email" id="emailRecipients" placeholder="owner@sanpeggios.com, manager@sanpeggios.com" style="width: 400px;">
+                            </div>
+                        </div>
+                        
+                        <div class="btn-group">
+                            <button class="btn btn-success" id="saveSettings">💾 Save Settings</button>
+                            <button class="btn btn-secondary" onclick="AlertConfig.load()">🔄 Reset to Defaults</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Tab Content: Export -->
+            <div id="export" class="tab-content">
+                <section class="section">
+                    <h2>📤 Export & Actions</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" id="exportCsv">
+                            📊 Export to CSV
+                        </button>
+                        <button class="btn btn-primary" onclick="window.print()">
+                            🖨️ Print Report
+                        </button>
+                        <button class="btn btn-primary" onclick="generatePDFReport()">
+                            📄 Generate PDF Report
+                        </button>
+                        <button class="btn btn-secondary" onclick="scheduleReport()">
+                            📅 Schedule Reports
+                        </button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Tab Content: Data Management -->
+            <div id="data-management" class="tab-content">
+                <section class="section">
+                    <h2>📁 Data Management</h2>
+                    <div class="upload-area">
+                        <!-- Upload UI will be created by store-ui.js -->
+                    </div>
+                </section>
+            </div>
+        </div>
     </div>
 
-    <!-- Drill-down Modal (Sprint 4) -->
+    <!-- Drill-down Modal -->
     <div id="drillDownModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -426,8 +507,68 @@
         </div>
     </div>
 
-    <!-- Additional Scripts for Advanced Features -->
+    <!-- Tab Navigation Script -->
     <script>
+        // Tab Navigation Functions
+        function showTab(tabId) {
+            // Hide all tab content
+            const allTabs = document.querySelectorAll('.tab-content');
+            allTabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all sidebar tabs
+            const allSidebarTabs = document.querySelectorAll('.sidebar-tab');
+            allSidebarTabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            const selectedTab = document.getElementById(tabId);
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+            
+            // Add active class to selected sidebar tab
+            const selectedSidebarTab = document.querySelector(`[data-tab="${tabId}"]`);
+            if (selectedSidebarTab) {
+                selectedSidebarTab.classList.add('active');
+            }
+            
+            // Close sidebar on mobile after selection
+            if (window.innerWidth <= 1024) {
+                closeSidebar();
+            }
+            
+            // Re-render charts if switching to tabs that contain charts
+            if (tabId === 'price-analytics' || tabId === 'supply-chain' || 
+                tabId === 'category-insights' || tabId === 'product-intelligence' || 
+                tabId === 'brand-analysis') {
+                setTimeout(() => {
+                    if (typeof refreshCharts === 'function') {
+                        refreshCharts();
+                    }
+                }, 100);
+            }
+        }
+        
+        // Mobile Sidebar Toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebarNav');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+        }
+        
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebarNav');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+        }
+        
         // PDF Report Generation (placeholder)
         function generatePDFReport() {
             alert('PDF generation would be implemented here. For now, use Print (Ctrl+P) and save as PDF.');
@@ -444,6 +585,12 @@
                 event.target.style.display = 'none';
             }
         }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Show overview tab by default
+            showTab('overview');
+        });
     </script>
 </body>
 </html>
