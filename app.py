@@ -65,6 +65,15 @@ def index():
     else:
         return redirect(url_for('replit_auth.login'))
 
+def safe_float(value):
+    """Safely convert a value to float, returning 0.0 if conversion fails"""
+    if value is None:
+        return 0.0
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return 0.0
+
 @app.route('/api/upload', methods=['POST'])
 @require_login
 def upload_invoice():
@@ -127,9 +136,10 @@ def upload_invoice():
             brand=record_data.get('Brand') or record_data.get('Brand Name'),
             category=record_data.get('Product Class Description') or record_data.get('Category'),
             pack_size=record_data.get('Pack Size'),
-            quantity=record_data.get('Qty Shipped') or record_data.get('Quantity'),
-            unit_price=record_data.get('Unit Price'),
-            extended_price=record_data.get('Ext. Price') or record_data.get('Extended Price'),
+            # Convert string values to floats for numeric fields with error handling
+            quantity=safe_float(record_data.get('Qty Shipped') or record_data.get('Quantity')),
+            unit_price=safe_float(record_data.get('Unit Price')),
+            extended_price=safe_float(record_data.get('Ext. Price') or record_data.get('Extended Price')),
             vendor=record_data.get('Manufacturer Name') or record_data.get('Vendor'),
             vendor_code=record_data.get('Vendor Code')
         )
