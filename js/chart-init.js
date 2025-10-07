@@ -592,8 +592,8 @@ function createCategoryHeatmap() {
   if (charts.heatmap) charts.heatmap.destroy();
   
   // Check for data
-  if (!analytics || !analytics.data || analytics.data.length === 0) {
-    showChartEmptyState(ctx, 'No data available for category heatmap');
+  if (!analytics || !analytics.categoryPerformance || Object.keys(analytics.categoryPerformance).length === 0) {
+    showChartEmptyState(ctx, 'No category performance data available');
     return;
   }
   
