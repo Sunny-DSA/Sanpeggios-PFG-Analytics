@@ -404,7 +404,14 @@ function generatePriceTrendSummary(categories, weeklyData, labels) {
     });
 
     if (prices.length < 2) {
-      return { category: cat, trend: 'Insufficient data', change: 0, current: 0, weeks: prices.length };
+      return { 
+        category: cat, 
+        trend: 'Insufficient data', 
+        change: 0, 
+        current: prices.length > 0 ? prices[0] : 0, 
+        weeks: prices.length,
+        volatility: 0
+      };
     }
 
     const firstPrice = prices[0];
@@ -416,9 +423,9 @@ function generatePriceTrendSummary(categories, weeklyData, labels) {
       category: cat,
       trend: changePercent > 5 ? '📈 Increasing' : changePercent < -5 ? '📉 Decreasing' : '➡️ Stable',
       change: changePercent,
-      current: lastPrice,
+      current: lastPrice || 0,
       weeks: prices.length,
-      volatility: calculateVolatility(prices) * 100
+      volatility: (calculateVolatility(prices) * 100) || 0
     };
   });
 
@@ -772,7 +779,7 @@ function createSpendForecastChart() {
   });
 }
 
-// Sprint 4: Category performance heatmap
+// Sprint 4: Category spending trends over time
 function createCategoryHeatmap() {
   const ctx = document.getElementById('categoryHeatmap')?.getContext('2d');
   if (!ctx) return;
@@ -780,67 +787,52 @@ function createCategoryHeatmap() {
   if (charts.heatmap) charts.heatmap.destroy();
 
   // Check for data
-  if (!analytics || !analytics.categoryPerformance || Object.keys(analytics.categoryPerformance).length === 0) {
-    showChartEmptyState(ctx, 'No category performance data available');
+  if (!analytics || !analytics.data || analytics.data.length === 0) {
+    showChartEmptyState(ctx, 'No category spending data available');
     return;
   }
 
-  // Prepare weekly data by category
-  const weeklyData = {};
+  // Prepare monthly data by category
+  const monthlyData = {};
   analytics.data.forEach(item => {
-    const week = getWeekNumber(item.invoiceDate);
-    const weekKey = `${item.invoiceDate.getFullYear()}-W${week}`;
-
-    if (!weeklyData[weekKey]) weeklyData[weekKey] = {};
-    if (!weeklyData[weekKey][item.category]) {
-      weeklyData[weekKey][item.category] = 0;
+    const month = item.invoiceDate.toISOString().slice(0, 7);
+    
+    if (!monthlyData[month]) monthlyData[month] = {};
+    if (!monthlyData[month][item.category]) {
+      monthlyData[month][item.category] = 0;
     }
-    weeklyData[weekKey][item.category] += item.extPrice;
+    monthlyData[month][item.category] += item.extPrice;
   });
 
-  // Get last 12 weeks
-  const weeks = Object.keys(weeklyData).sort().slice(-12);
-  const categories = [...new Set(analytics.data.map(d => d.category))].slice(0, 8);
-
-  // Create matrix data
-  const matrixData = [];
-  categories.forEach((cat, y) => {
-    weeks.forEach((week, x) => {
-      const value = weeklyData[week] && weeklyData[week][cat] ? weeklyData[week][cat] : 0;
-      matrixData.push({
-        x: week,
-        y: cat,
-        v: value
-      });
-    });
+  const months = Object.keys(monthlyData).sort();
+  
+  // Get top categories by total spend
+  const categoryTotals = {};
+  analytics.data.forEach(item => {
+    if (!categoryTotals[item.category]) categoryTotals[item.category] = 0;
+    categoryTotals[item.category] += item.extPrice;
   });
+  
+  const topCategories = Object.entries(categoryTotals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([cat]) => cat);
 
-  // Find max value for color scaling
-  const maxValue = Math.max(...matrixData.map(d => d.v));
+  const datasets = topCategories.map((cat, idx) => ({
+    label: cat,
+    data: months.map(month => monthlyData[month][cat] || 0),
+    borderColor: colorSchemes.primary[idx % colorSchemes.primary.length],
+    backgroundColor: colorSchemes.primary[idx % colorSchemes.primary.length].replace('0.8', '0.2'),
+    fill: true,
+    tension: 0.4,
+    borderWidth: 2
+  }));
 
   charts.heatmap = new Chart(ctx, {
-    type: 'matrix',
+    type: 'line',
     data: {
-      datasets: [{
-        label: 'Weekly Spend',
-        data: matrixData,
-        backgroundColor: (ctx) => {
-          const dataPoint = ctx.dataset.data[ctx.dataIndex];
-          const value = dataPoint ? dataPoint.v : 0;
-          const alpha = value / maxValue;
-          return `rgba(220, 38, 38, ${alpha})`;
-        },
-        borderWidth: 1,
-        borderColor: 'rgba(0, 0, 0, 0.1)',
-        width: ({ chart }) => {
-          const area = chart.chartArea || { width: 400 };
-          return area.width / weeks.length - 1;
-        },
-        height: ({ chart }) => {
-          const area = chart.chartArea || { height: 400 };
-          return area.height / categories.length - 1;
-        }
-      }]
+      labels: months,
+      datasets
     },
     options: {
       responsive: true,
@@ -848,30 +840,47 @@ function createCategoryHeatmap() {
       plugins: {
         title: {
           display: true,
-          text: 'Category Performance Heatmap (Weekly Spend)',
+          text: 'Category Spending Trends Over Time',
           font: { size: 16 }
         },
+        legend: {
+          display: true,
+          position: 'bottom'
+        },
         tooltip: {
+          mode: 'index',
+          intersect: false,
           callbacks: {
-            title: () => '',
-            label: (ctx) => {
-              const data = ctx.dataset.data[ctx.dataIndex];
-              return `${data.y} - ${data.x}: $${data.v.toLocaleString()}`;
+            label: (context) => {
+              return `${context.dataset.label}: $${context.parsed.y.toLocaleString()}`;
+            },
+            footer: (tooltipItems) => {
+              const total = tooltipItems.reduce((sum, item) => sum + item.parsed.y, 0);
+              return `Total: $${total.toLocaleString()}`;
             }
           }
         }
       },
       scales: {
         x: {
-          type: 'category',
-          labels: weeks,
-          title: { display: true, text: 'Week' }
+          title: { display: true, text: 'Month' },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45
+          }
         },
         y: {
-          type: 'category',
-          labels: categories,
-          title: { display: true, text: 'Category' }
+          title: { display: true, text: 'Spend ($)' },
+          beginAtZero: true,
+          stacked: false,
+          ticks: {
+            callback: value => '$' + value.toLocaleString()
+          }
         }
+      },
+      interaction: {
+        mode: 'index',
+        intersect: false
       }
     }
   });
