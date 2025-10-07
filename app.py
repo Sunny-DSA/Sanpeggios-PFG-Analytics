@@ -124,13 +124,13 @@ def upload_invoice():
             zip_code=record_data.get('Zip'),
             product_code=product_code,
             product_description=record_data.get('Product Description'),
-            brand=record_data.get('Brand'),
-            category=record_data.get('Category'),
+            brand=record_data.get('Brand') or record_data.get('Brand Name'),
+            category=record_data.get('Product Class Description') or record_data.get('Category'),
             pack_size=record_data.get('Pack Size'),
-            quantity=record_data.get('Quantity'),
+            quantity=record_data.get('Qty Shipped') or record_data.get('Quantity'),
             unit_price=record_data.get('Unit Price'),
-            extended_price=record_data.get('Extended Price'),
-            vendor=record_data.get('Vendor'),
+            extended_price=record_data.get('Ext. Price') or record_data.get('Extended Price'),
+            vendor=record_data.get('Manufacturer Name') or record_data.get('Vendor'),
             vendor_code=record_data.get('Vendor Code')
         )
         db.session.add(record)
