@@ -164,16 +164,19 @@ def get_stores():
 def get_records(store_id):
     """Get all invoice records for a specific store"""
     from models import InvoiceRecord
+    from sqlalchemy import select
     
     print(f"Fetching records for user_id={current_user.id}, store_id={store_id}")
 
     if store_id == 'all':
-        records = InvoiceRecord.query.filter_by(user_id=current_user.id).all()
+        stmt = select(InvoiceRecord).where(InvoiceRecord.user_id == current_user.id)
     else:
-        records = InvoiceRecord.query.filter_by(
-            user_id=current_user.id,
-            store_id=store_id
-        ).all()
+        stmt = select(InvoiceRecord).where(
+            InvoiceRecord.user_id == current_user.id,
+            InvoiceRecord.store_id == store_id
+        )
+    
+    records = db.session.execute(stmt).scalars().all()
 
     print(f"Found {len(records)} records")
 
