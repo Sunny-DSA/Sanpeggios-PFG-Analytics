@@ -321,6 +321,11 @@ const StoreDataManager = {
           storeGroups[storeId].push(convertedRecord);
           assignedCount++;
         } else {
+          console.warn('Could not assign record to store:', {
+            storeId: storeId,
+            address: record['Address'],
+            city: record['City']
+          });
           unassignedCount++;
         }
       }.bind(this));
@@ -337,14 +342,23 @@ const StoreDataManager = {
       }.bind(this));
 
       console.log(`Loaded and processed ${assignedCount} assigned records from database`);
-      console.log(`Store breakdown: All=${this.stores.all.data.length} records`);
+      
+      // Log detailed breakdown per store for verification
+      const storeBreakdown = {};
+      for (const storeId in STORE_CONFIG) {
+        const count = this.stores[storeId].data.length;
+        storeBreakdown[STORE_CONFIG[storeId].name] = count;
+      }
+      console.log('Store breakdown:', storeBreakdown);
+      console.log(`Total in "All Stores": ${this.stores.all.data.length} records`);
       
       return {
         success: true,
         recordCount: allRecords.length,
         assignedCount: assignedCount,
         unassignedCount: unassignedCount,
-        message: `Loaded ${assignedCount} records from database`
+        message: `Loaded ${assignedCount} records from database`,
+        storeBreakdown: storeBreakdown
       };
 
     } catch (error) {

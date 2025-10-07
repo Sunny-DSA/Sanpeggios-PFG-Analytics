@@ -163,6 +163,8 @@ def get_stores():
 @require_login
 def get_records(store_id):
     """Get all invoice records for a specific store"""
+    from models import InvoiceRecord
+    
     print(f"Fetching records for user_id={current_user.id}, store_id={store_id}")
 
     if store_id == 'all':
@@ -192,7 +194,8 @@ def get_records(store_id):
         'Unit Price': r.unit_price,
         'Extended Price': r.extended_price,
         'Vendor': r.vendor,
-        'Vendor Code': r.vendor_code
+        'Vendor Code': r.vendor_code,
+        'Store ID': r.store_id
     } for r in records])
 
 @app.route('/<path:path>')
