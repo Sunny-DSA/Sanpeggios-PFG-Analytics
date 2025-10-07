@@ -130,6 +130,11 @@ def make_replit_blueprint(app=None):
 
 def save_user(user_claims):
     from models import User
+    
+    # Validate required claims
+    if 'sub' not in user_claims:
+        raise ValueError("User claims missing required 'sub' field")
+    
     user = User()
     user.id = user_claims['sub']
     user.email = user_claims.get('email')
@@ -143,14 +148,21 @@ def save_user(user_claims):
 
 @oauth_authorized.connect
 def logged_in(blueprint, token):
-    user_claims = jwt.decode(token['id_token'],
-                             options={"verify_signature": False})
-    user = save_user(user_claims)
-    login_user(user)
-    blueprint.token = token
-    next_url = session.pop("next_url", None)
-    if next_url is not None:
-        return redirect(next_url)
+    try:
+        if not token or 'id_token' not in token:
+            return redirect(url_for('replit_auth.error'))
+        
+        user_claims = jwt.decode(token['id_token'],
+                                 options={"verify_signature": False})
+        user = save_user(user_claims)
+        login_user(user)
+        blueprint.token = token
+        next_url = session.pop("next_url", None)
+        if next_url is not None:
+            return redirect(next_url)
+    except Exception as e:
+        print(f"Login error: {e}")
+        return redirect(url_for('replit_auth.error'))
 
 
 @oauth_error.connect
@@ -167,16 +179,26 @@ def require_login(f):
             session["next_url"] = get_next_navigation_url(request)
             return redirect(url_for('replit_auth.login'))
 
-        expires_in = replit.token.get('expires_in', 0)
-        if expires_in < 0:
-            refresh_token_url = issuer_url + "/token"
-            try:
-                token = replit.refresh_token(token_url=refresh_token_url,
-                                             client_id=os.environ['REPL_ID'])
-            except InvalidGrantError:
-                session["next_url"] = get_next_navigation_url(request)
-                return redirect(url_for('replit_auth.login'))
-            replit.token_updater(token)
+        try:
+            expires_in = replit.token.get('expires_in', 0)
+            if expires_in < 0:
+                refresh_token_url = issuer_url + "/token"
+                try:
+                    token = replit.refresh_token(token_url=refresh_token_url,
+                                                 client_id=os.environ['REPL_ID'])
+                    replit.token_updater(token)
+                except InvalidGrantError:
+                    session["next_url"] = get_next_navigation_url(request)
+                    return redirect(url_for('replit_auth.login'))
+                except Exception as e:
+                    # Handle other token refresh errors
+                    print(f"Token refresh error: {e}")
+                    session["next_url"] = get_next_navigation_url(request)
+                    return redirect(url_for('replit_auth.login'))
+        except AttributeError:
+            # replit.token doesn't exist, redirect to login
+            session["next_url"] = get_next_navigation_url(request)
+            return redirect(url_for('replit_auth.login'))
 
         return f(*args, **kwargs)
 
