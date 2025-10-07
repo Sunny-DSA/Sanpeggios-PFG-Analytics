@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="css/styles.css">
     
     <!-- Scripts -->
+    <script src="js/tab-navigation.js" defer></script>
     <script src="js/parser.js" defer></script>
     <script src="js/database.js" defer></script>
     <script src="js/store-manager.js" defer></script>
@@ -507,68 +508,8 @@
         </div>
     </div>
 
-    <!-- Tab Navigation Script -->
+    <!-- Additional Scripts for functionality -->
     <script>
-        // Tab Navigation Functions
-        function showTab(tabId) {
-            // Hide all tab content
-            const allTabs = document.querySelectorAll('.tab-content');
-            allTabs.forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Remove active class from all sidebar tabs
-            const allSidebarTabs = document.querySelectorAll('.sidebar-tab');
-            allSidebarTabs.forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Show selected tab content
-            const selectedTab = document.getElementById(tabId);
-            if (selectedTab) {
-                selectedTab.classList.add('active');
-            }
-            
-            // Add active class to selected sidebar tab
-            const selectedSidebarTab = document.querySelector(`[data-tab="${tabId}"]`);
-            if (selectedSidebarTab) {
-                selectedSidebarTab.classList.add('active');
-            }
-            
-            // Close sidebar on mobile after selection
-            if (window.innerWidth <= 1024) {
-                closeSidebar();
-            }
-            
-            // Re-render charts if switching to tabs that contain charts
-            if (tabId === 'price-analytics' || tabId === 'supply-chain' || 
-                tabId === 'category-insights' || tabId === 'product-intelligence' || 
-                tabId === 'brand-analysis') {
-                setTimeout(() => {
-                    if (typeof refreshCharts === 'function') {
-                        refreshCharts();
-                    }
-                }, 100);
-            }
-        }
-        
-        // Mobile Sidebar Toggle
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebarNav');
-            const overlay = document.getElementById('sidebarOverlay');
-            
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('open');
-        }
-        
-        function closeSidebar() {
-            const sidebar = document.getElementById('sidebarNav');
-            const overlay = document.getElementById('sidebarOverlay');
-            
-            sidebar.classList.remove('open');
-            overlay.classList.remove('open');
-        }
-        
         // PDF Report Generation (placeholder)
         function generatePDFReport() {
             alert('PDF generation would be implemented here. For now, use Print (Ctrl+P) and save as PDF.');
@@ -585,12 +526,6 @@
                 event.target.style.display = 'none';
             }
         }
-        
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            // Show overview tab by default
-            showTab('overview');
-        });
     </script>
 </body>
 </html>
