@@ -375,7 +375,9 @@ function createBudgetVarianceChart() {
   if (charts.budgetVariance) charts.budgetVariance.destroy();
   
   // Check for data
+  console.log('Budget variance data:', analytics?.budgetVariance);
   if (!analytics || !analytics.budgetVariance || Object.keys(analytics.budgetVariance).length === 0) {
+    console.log('No budget variance data available');
     showChartEmptyState(ctx, 'No budget variance data available');
     return;
   }

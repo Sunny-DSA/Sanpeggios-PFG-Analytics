@@ -91,13 +91,18 @@ function detectSpikes(data, zThreshold = 2) {
 
 // Sprint 2: Budget variance calculation
 function calculateBudgetVariance(data, budgetData = {}) {
+  // Return empty object if no data
+  if (!data || data.length === 0) {
+    return {};
+  }
+  
   // Group by category and month
   const actualByCategory = {};
   const monthlyActual = {};
   
   data.forEach(item => {
     const month = item.invoiceDate.toISOString().slice(0, 7);
-    const cat = item.category;
+    const cat = item.category || 'Unknown';
     
     // Category totals
     if (!actualByCategory[cat]) actualByCategory[cat] = 0;
@@ -116,7 +121,7 @@ function calculateBudgetVariance(data, budgetData = {}) {
   Object.keys(actualByCategory).forEach(cat => {
     const last3Months = months.slice(-3);
     const avgMonthly = last3Months.reduce((sum, month) => 
-      sum + (monthlyActual[month][cat] || 0), 0) / 3;
+      sum + (monthlyActual[month][cat] || 0), 0) / Math.max(last3Months.length, 1);
     projectedByCategory[cat] = avgMonthly * months.length;
   });
   
@@ -133,6 +138,7 @@ function calculateBudgetVariance(data, budgetData = {}) {
     };
   });
   
+  console.log('Budget variance calculated:', variance);
   return variance;
 }
 
