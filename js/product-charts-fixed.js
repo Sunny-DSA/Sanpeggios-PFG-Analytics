@@ -60,6 +60,8 @@ async function initializeProductAnalytics() {
   createTopProductsTable();
   createSubstitutionTable();
   createBrandComparisonChart();
+  createBrandMarketShareChart(); // New: Market Share
+  createBrandSummaryTable(); // New: Summary Table
   createDataQualityIndicators(); // New: Data Quality
   createPackSizeOptimizationChart(); // New: Pack Size Optimization
   createVendorDiversificationChart(); // New: Vendor Diversification
@@ -180,7 +182,7 @@ function createABCChart() {
   });
 }
 
-// Brand Performance Chart
+// Brand Performance Chart with color-coding and interactivity
 function createBrandPerformanceChart() {
   const ctx = document.getElementById('brandChart');
   if (!ctx) {
@@ -197,31 +199,42 @@ function createBrandPerformanceChart() {
     .sort(function(a, b) { return b.totalSpend - a.totalSpend; })
     .slice(0, 10);
 
+  // Create separate dataset for each brand with unique color
+  const datasets = brands.map(function(brand, idx) {
+    return {
+      label: brand.brand,
+      data: [{
+        x: brand.avgPrice,
+        y: brand.totalSpend,
+        r: Math.sqrt(brand.productCount) * 5,
+        brand: brand.brand,
+        products: brand.productCount,
+        loyaltyRate: brand.loyaltyRate || 0,
+        competitivenessIndex: brand.competitivenessIndex || 0
+      }],
+      backgroundColor: productColorSchemes.primary[idx % productColorSchemes.primary.length].replace('0.8', '0.6'),
+      borderColor: productColorSchemes.primary[idx % productColorSchemes.primary.length],
+      borderWidth: 2
+    };
+  });
+
   new Chart(ctx.getContext('2d'), {
     type: 'bubble',
-    data: {
-      datasets: [{
-        label: 'Brand Performance',
-        data: brands.map(function(brand) {
-          return {
-            x: brand.avgPrice,
-            y: brand.totalSpend,
-            r: Math.sqrt(brand.productCount) * 5,
-            brand: brand.brand,
-            products: brand.productCount
-          };
-        }),
-        backgroundColor: 'rgba(220, 38, 38, 0.6)',
-        borderColor: 'rgba(220, 38, 38, 0.8)'
-      }]
-    },
+    data: { datasets: datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      onClick: function(event, elements) {
+        if (elements.length > 0) {
+          const datasetIndex = elements[0].datasetIndex;
+          const brand = brands[datasetIndex];
+          showBrandDetails(brand);
+        }
+      },
       plugins: {
         title: {
           display: true,
-          text: 'Brand Performance Analysis'
+          text: 'Brand Performance Analysis (Click to View Details)'
         },
         tooltip: {
           callbacks: {
@@ -231,9 +244,18 @@ function createBrandPerformanceChart() {
                 'Brand: ' + point.brand,
                 'Avg Price: $' + point.x.toFixed(2),
                 'Total Spend: $' + point.y.toLocaleString(),
-                'Products: ' + point.products
+                'Products: ' + point.products,
+                'Loyalty Rate: ' + point.loyaltyRate.toFixed(1) + '%',
+                'Competitiveness: ' + point.competitivenessIndex.toFixed(1)
               ];
             }
+          }
+        },
+        legend: {
+          position: 'right',
+          labels: {
+            usePointStyle: true,
+            padding: 10
           }
         }
       },
@@ -319,7 +341,7 @@ function createProductLifecycleChart() {
   });
 }
 
-// Brand Comparison Radar Chart
+// Brand Comparison Radar Chart with interactivity
 function createBrandComparisonChart() {
   const ctx = document.getElementById('brandComparisonChart');
   if (!ctx) {
@@ -346,7 +368,7 @@ function createBrandComparisonChart() {
   new Chart(ctx.getContext('2d'), {
     type: 'radar',
     data: {
-      labels: ['Total Spend', 'Product Variety', 'Avg Price', 'Category Coverage', 'Price Stability'],
+      labels: ['Total Spend', 'Product Variety', 'Avg Price', 'Category Coverage', 'Price Stability', 'Loyalty Rate'],
       datasets: topBrands.map(function(brand, idx) {
         return {
           label: brand.brand,
@@ -355,20 +377,33 @@ function createBrandComparisonChart() {
             (brand.productCount / maxProducts) * 100,
             (brand.avgPrice / maxPrice) * 100,
             (brand.categoryCount / maxCategories) * 100,
-            100 - (brand.priceSpread / brand.avgPrice * 100) // Price stability
+            100 - (brand.priceSpread / brand.avgPrice * 100), // Price stability
+            brand.loyaltyRate || 0
           ],
           borderColor: productColorSchemes.primary[idx],
-          backgroundColor: productColorSchemes.primary[idx].replace('0.8', '0.2')
+          backgroundColor: productColorSchemes.primary[idx].replace('0.8', '0.2'),
+          borderWidth: 2,
+          brandData: brand
         };
       })
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      onClick: function(event, elements) {
+        if (elements.length > 0) {
+          const datasetIndex = elements[0].datasetIndex;
+          const brand = topBrands[datasetIndex];
+          showBrandDetails(brand);
+        }
+      },
       plugins: {
         title: {
           display: true,
-          text: 'Brand Comparison (Normalized Metrics)'
+          text: 'Brand Comparison (Click to View Details)'
+        },
+        legend: {
+          position: 'bottom'
         }
       },
       scales: {
@@ -1242,7 +1277,255 @@ function showProductDrillDown(product) {
   document.head.appendChild(style);
 })();
 
+// Show brand details modal
+function showBrandDetails(brand) {
+  const modal = document.getElementById('productModal');
+  const modalTitle = document.getElementById('productModalTitle');
+  const modalBody = document.getElementById('productModalBody');
+
+  if (!modal || !modalTitle || !modalBody) {
+    console.warn('Brand details modal not found');
+    return;
+  }
+
+  modalTitle.textContent = 'Brand Analysis: ' + brand.brand;
+
+  let html = '<div class="brand-details">' +
+    '<div class="detail-grid">' +
+      '<div class="detail-card">' +
+        '<h4>📊 Performance Metrics</h4>' +
+        '<p><strong>Total Spend:</strong> $' + brand.totalSpend.toLocaleString() + '</p>' +
+        '<p><strong>Product Count:</strong> ' + brand.productCount + '</p>' +
+        '<p><strong>Category Coverage:</strong> ' + brand.categoryCount + '</p>' +
+        '<p><strong>Vendor Count:</strong> ' + brand.vendorCount + '</p>' +
+      '</div>' +
+      '<div class="detail-card">' +
+        '<h4>💰 Pricing Analysis</h4>' +
+        '<p><strong>Average Price:</strong> $' + brand.avgPrice.toFixed(2) + '</p>' +
+        '<p><strong>Price Range:</strong> $' + brand.priceRange.min.toFixed(2) + ' - $' + brand.priceRange.max.toFixed(2) + '</p>' +
+        '<p><strong>Price Spread:</strong> $' + brand.priceSpread.toFixed(2) + '</p>' +
+        '<p><strong>Competitiveness Index:</strong> ' + (brand.competitivenessIndex || 0).toFixed(1) + '</p>' +
+      '</div>' +
+      '<div class="detail-card">' +
+        '<h4>🔄 Loyalty & Retention</h4>' +
+        '<p><strong>Loyalty Rate:</strong> ' + (brand.loyaltyRate || 0).toFixed(1) + '%</p>' +
+        '<p><strong>Repeat Purchases:</strong> ' + (brand.repeatPurchases || 0) + '</p>' +
+        '<p><strong>Total Orders:</strong> ' + brand.invoiceCount + '</p>' +
+      '</div>' +
+      '<div class="detail-card">' +
+        '<h4>📈 Market Position</h4>' +
+        '<p><strong>Market Share:</strong> ' + (brand.marketShare || 0).toFixed(1) + '%</p>' +
+        '<p><strong>Switching Rate:</strong> ' + (brand.switchingRate || 0).toFixed(1) + '%</p>' +
+        '<p><strong>Growth Trend:</strong> <span class="' + (brand.growthTrend > 0 ? 'positive' : 'negative') + '">' +
+          (brand.growthTrend > 0 ? '↑' : '↓') + ' ' + Math.abs(brand.growthTrend || 0).toFixed(1) + '%</span></p>' +
+      '</div>' +
+    '</div>';
+
+  // Add brand switching patterns if available
+  if (brand.switchingPatterns && brand.switchingPatterns.length > 0) {
+    html += '<h4 class="mt-3">🔄 Brand Switching Patterns</h4>' +
+      '<table class="data-table">' +
+        '<thead><tr><th>From Brand</th><th>To Brand</th><th>Switch Count</th><th>% of Switches</th></tr></thead>' +
+        '<tbody>';
+    
+    brand.switchingPatterns.forEach(function(pattern) {
+      html += '<tr>' +
+        '<td>' + pattern.fromBrand + '</td>' +
+        '<td>' + pattern.toBrand + '</td>' +
+        '<td>' + pattern.count + '</td>' +
+        '<td>' + pattern.percentage.toFixed(1) + '%</td>' +
+      '</tr>';
+    });
+    
+    html += '</tbody></table>';
+  }
+
+  // Add products list
+  html += '<h4 class="mt-3">📦 Products in Brand</h4>' +
+    '<div style="max-height: 200px; overflow-y: auto;">' +
+    '<ul style="columns: 2; column-gap: 1rem; list-style: disc; padding-left: 1.5rem;">';
+  
+  brand.products.forEach(function(product) {
+    html += '<li style="margin-bottom: 0.25rem;">' + product + '</li>';
+  });
+  
+  html += '</ul></div>';
+
+  // Add time-series trend chart
+  html += '<h4 class="mt-3">📈 Spend Trend Over Time</h4>' +
+    '<div class="chart-container" style="height: 250px;">' +
+      '<canvas id="brandTrendChart"></canvas>' +
+    '</div>';
+
+  html += '</div>';
+
+  modalBody.innerHTML = html;
+  modal.style.display = 'block';
+
+  // Create trend chart
+  setTimeout(function() {
+    createBrandTrendChart(brand);
+  }, 100);
+}
+
+// Brand Market Share Pie Chart
+function createBrandMarketShareChart() {
+  const ctx = document.getElementById('brandMarketShareChart');
+  if (!ctx || !productAnalyticsData || !productAnalyticsData.brandAnalysis) return;
+
+  const brands = Object.values(productAnalyticsData.brandAnalysis)
+    .sort(function(a, b) { return b.totalSpend - a.totalSpend; })
+    .slice(0, 8);
+
+  new Chart(ctx.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: brands.map(function(b) { return b.brand; }),
+      datasets: [{
+        data: brands.map(function(b) { return b.marketShare; }),
+        backgroundColor: productColorSchemes.primary
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      onClick: function(event, elements) {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          showBrandDetails(brands[index]);
+        }
+      },
+      plugins: {
+        title: {
+          display: true,
+          text: 'Market Share by Brand (Click for Details)'
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return context.label + ': ' + context.parsed.toFixed(1) + '%';
+            }
+          }
+        },
+        legend: {
+          position: 'right'
+        }
+      }
+    }
+  });
+}
+
+// Brand Summary Table
+function createBrandSummaryTable() {
+  const container = document.getElementById('brandSummaryTable');
+  if (!container || !productAnalyticsData || !productAnalyticsData.brandAnalysis) return;
+
+  const brands = Object.values(productAnalyticsData.brandAnalysis)
+    .sort(function(a, b) { return b.totalSpend - a.totalSpend; })
+    .slice(0, 10);
+
+  let html = '<table class="data-table" style="font-size: 0.9rem;">' +
+    '<thead>' +
+      '<tr>' +
+        '<th>Brand</th>' +
+        '<th class="number">Market Share</th>' +
+        '<th class="number">Loyalty</th>' +
+        '<th class="number">Competitiveness</th>' +
+        '<th>Action</th>' +
+      '</tr>' +
+    '</thead>' +
+    '<tbody>';
+
+  brands.forEach(function(brand) {
+    const compColor = brand.competitivenessIndex < 100 ? 'positive' : brand.competitivenessIndex > 110 ? 'negative' : '';
+    
+    html += '<tr>' +
+      '<td><strong>' + brand.brand + '</strong></td>' +
+      '<td class="number">' + brand.marketShare.toFixed(1) + '%</td>' +
+      '<td class="number ' + (brand.loyaltyRate > 20 ? 'positive' : '') + '">' + brand.loyaltyRate.toFixed(1) + '%</td>' +
+      '<td class="number ' + compColor + '">' + brand.competitivenessIndex.toFixed(0) + '</td>' +
+      '<td>' +
+        '<button class="btn-small" onclick="showBrandDetails(' + JSON.stringify(brand).replace(/"/g, '&quot;') + ')">' +
+          'Details' +
+        '</button>' +
+      '</td>' +
+    '</tr>';
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+// Create brand time-series trend chart
+function createBrandTrendChart(brand) {
+  const canvas = document.getElementById('brandTrendChart');
+  if (!canvas || !productAnalyticsData || !productAnalyticsData.rawData) return;
+
+  const ctx = canvas.getContext('2d');
+  
+  // Get all invoices for this brand
+  const brandInvoices = productAnalyticsData.rawData.filter(function(item) {
+    return item.brand === brand.brand;
+  });
+
+  // Group by month
+  const monthlyData = {};
+  brandInvoices.forEach(function(item) {
+    const month = item.invoiceDate.toISOString().slice(0, 7);
+    if (!monthlyData[month]) {
+      monthlyData[month] = { spend: 0, qty: 0, count: 0 };
+    }
+    monthlyData[month].spend += item.extPrice;
+    monthlyData[month].qty += item.qty;
+    monthlyData[month].count += 1;
+  });
+
+  const labels = Object.keys(monthlyData).sort();
+  
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Monthly Spend',
+        data: labels.map(function(m) { return monthlyData[m].spend; }),
+        borderColor: 'rgba(220, 38, 38, 0.8)',
+        backgroundColor: 'rgba(220, 38, 38, 0.1)',
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            afterLabel: function(context) {
+              const month = labels[context.dataIndex];
+              return [
+                'Orders: ' + monthlyData[month].count,
+                'Quantity: ' + monthlyData[month].qty
+              ];
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) { return '$' + value.toLocaleString(); }
+          }
+        }
+      }
+    }
+  });
+}
+
 // Export for use in main application
 window.initializeProductAnalytics = initializeProductAnalytics;
 window.showProductDetails = showProductDetails;
-window.showProductDrillDown = showProductDrillDown; // Export the drill-down function as well
+window.showProductDrillDown = showProductDrillDown;
+window.showBrandDetails = showBrandDetails;

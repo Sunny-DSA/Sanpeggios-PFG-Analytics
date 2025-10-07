@@ -277,7 +277,7 @@
         <section class="section">
             <h2>🏷️ Brand Performance Analysis</h2>
             
-            <div class="grid grid-2">
+            <div class="grid grid-2 mb-3">
                 <!-- Brand Performance Bubble Chart -->
                 <div>
                     <h3>💰 Brand Value Analysis</h3>
@@ -285,7 +285,7 @@
                         <canvas id="brandChart"></canvas>
                     </div>
                     <p class="text-small text-muted">
-                        Bubble size represents product variety. Position shows price vs. spend relationship.
+                        Each brand has a unique color. Bubble size represents product variety. Click bubbles for details.
                     </p>
                 </div>
                 
@@ -296,8 +296,24 @@
                         <canvas id="brandComparisonChart"></canvas>
                     </div>
                     <p class="text-small text-muted">
-                        Multi-dimensional brand comparison across key metrics.
+                        Multi-dimensional brand comparison. Click to view brand details.
                     </p>
+                </div>
+            </div>
+            
+            <div class="grid grid-2 mb-3">
+                <!-- Brand Market Share -->
+                <div>
+                    <h3>📊 Brand Market Share</h3>
+                    <div class="chart-container small">
+                        <canvas id="brandMarketShareChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Brand Summary Table -->
+                <div>
+                    <h3>📋 Brand Performance Summary</h3>
+                    <div id="brandSummaryTable" style="max-height: 300px; overflow-y: auto;"></div>
                 </div>
             </div>
         </section>

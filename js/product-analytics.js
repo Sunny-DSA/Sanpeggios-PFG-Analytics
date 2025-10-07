@@ -135,12 +135,18 @@ function performABCAnalysis(productMetrics) {
   };
 }
 
-// Brand Analysis
+// Brand Analysis with loyalty, competitiveness, and switching patterns
 function analyzeBrands(data) {
   const brandMetrics = {};
+  const totalSpend = data.reduce((sum, item) => sum + item.extPrice, 0);
+  
+  // Track customer purchase sequences for loyalty analysis
+  const customerPurchases = {};
   
   data.forEach(item => {
     const brand = item.brand || 'Generic';
+    const productKey = item.productDescription;
+    const invoiceDate = item.invoiceDate.toISOString().slice(0, 10);
     
     if (!brandMetrics[brand]) {
       brandMetrics[brand] = {
@@ -152,21 +158,51 @@ function analyzeBrands(data) {
         invoiceCount: 0,
         avgPrice: 0,
         priceRange: { min: Infinity, max: -Infinity },
-        vendors: new Set()
+        vendors: new Set(),
+        purchaseDates: [],
+        repeatProducts: new Set(),
+        categoryPrices: {} // Track prices by category for competitiveness
       };
     }
     
     const metric = brandMetrics[brand];
-    metric.products.add(item.productDescription);
+    metric.products.add(productKey);
     metric.categories.add(item.category);
     metric.totalSpend += item.extPrice;
     metric.totalQty += item.qty;
     metric.invoiceCount += 1;
     metric.vendors.add(item.vendor);
+    metric.purchaseDates.push(invoiceDate);
     
     // Track price range
     if (item.unitPrice < metric.priceRange.min) metric.priceRange.min = item.unitPrice;
     if (item.unitPrice > metric.priceRange.max) metric.priceRange.max = item.unitPrice;
+    
+    // Track category prices for competitiveness index
+    if (!metric.categoryPrices[item.category]) {
+      metric.categoryPrices[item.category] = [];
+    }
+    metric.categoryPrices[item.category].push(item.unitPrice);
+    
+    // Track customer purchase sequences
+    if (!customerPurchases[productKey]) {
+      customerPurchases[productKey] = [];
+    }
+    customerPurchases[productKey].push({ brand, date: invoiceDate });
+  });
+  
+  // Calculate brand switching patterns
+  const brandSwitching = {};
+  Object.keys(customerPurchases).forEach(product => {
+    const purchases = customerPurchases[product].sort((a, b) => a.date.localeCompare(b.date));
+    for (let i = 1; i < purchases.length; i++) {
+      const fromBrand = purchases[i-1].brand;
+      const toBrand = purchases[i].brand;
+      if (fromBrand !== toBrand) {
+        const key = `${fromBrand}→${toBrand}`;
+        brandSwitching[key] = (brandSwitching[key] || 0) + 1;
+      }
+    }
   });
   
   // Calculate derived metrics
@@ -176,11 +212,73 @@ function analyzeBrands(data) {
     metric.categoryCount = metric.categories.size;
     metric.vendorCount = metric.vendors.size;
     metric.priceSpread = metric.priceRange.max - metric.priceRange.min;
+    metric.marketShare = totalSpend > 0 ? (metric.totalSpend / totalSpend) * 100 : 0;
+    
+    // Calculate loyalty rate (repeat purchases / total purchases)
+    const uniqueDates = new Set(metric.purchaseDates);
+    metric.repeatPurchases = metric.purchaseDates.length - uniqueDates.size;
+    metric.loyaltyRate = metric.purchaseDates.length > 0 ? 
+      (metric.repeatPurchases / metric.purchaseDates.length) * 100 : 0;
+    
+    // Calculate price competitiveness index
+    // Lower index = more competitive (cheaper than average in same categories)
+    let totalCompScore = 0;
+    let catCount = 0;
+    Object.keys(metric.categoryPrices).forEach(category => {
+      const brandAvgPrice = average(metric.categoryPrices[category]);
+      // Get all prices in this category across all brands
+      const allCategoryPrices = data
+        .filter(item => item.category === category)
+        .map(item => item.unitPrice);
+      const categoryAvgPrice = average(allCategoryPrices);
+      
+      if (categoryAvgPrice > 0) {
+        // Score: <100 = cheaper than average, >100 = more expensive
+        totalCompScore += (brandAvgPrice / categoryAvgPrice) * 100;
+        catCount++;
+      }
+    });
+    metric.competitivenessIndex = catCount > 0 ? totalCompScore / catCount : 100;
+    
+    // Calculate switching patterns for this brand
+    metric.switchingPatterns = [];
+    let totalSwitches = 0;
+    Object.keys(brandSwitching).forEach(key => {
+      if (key.startsWith(metric.brand + '→')) {
+        const toBrand = key.split('→')[1];
+        metric.switchingPatterns.push({
+          fromBrand: metric.brand,
+          toBrand: toBrand,
+          count: brandSwitching[key]
+        });
+        totalSwitches += brandSwitching[key];
+      }
+    });
+    
+    // Calculate percentage for each switch
+    metric.switchingPatterns.forEach(pattern => {
+      pattern.percentage = totalSwitches > 0 ? (pattern.count / totalSwitches) * 100 : 0;
+    });
+    metric.switchingPatterns.sort((a, b) => b.count - a.count);
+    metric.switchingRate = metric.invoiceCount > 0 ? (totalSwitches / metric.invoiceCount) * 100 : 0;
+    
+    // Calculate growth trend (comparing first half vs second half of purchase period)
+    if (metric.purchaseDates.length > 3) {
+      const sortedDates = metric.purchaseDates.sort();
+      const midPoint = Math.floor(sortedDates.length / 2);
+      const firstHalf = sortedDates.slice(0, midPoint).length;
+      const secondHalf = sortedDates.slice(midPoint).length;
+      metric.growthTrend = firstHalf > 0 ? ((secondHalf - firstHalf) / firstHalf) * 100 : 0;
+    } else {
+      metric.growthTrend = 0;
+    }
     
     // Convert Sets to Arrays for serialization
     metric.products = Array.from(metric.products);
     metric.categories = Array.from(metric.categories);
     metric.vendors = Array.from(metric.vendors);
+    delete metric.categoryPrices; // Remove raw data
+    delete metric.purchaseDates; // Remove raw data
   });
   
   return brandMetrics;
