@@ -38,19 +38,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     // Initialize Store Data Manager
     StoreDataManager.init();
-    
+
     // Initialize Store UI
     StoreUI.init();
-    
+
     // Wait for all dependencies to load
     await waitForDependencies();
-    
+
     // Load existing data from database
     console.log('Checking for existing data in database...');
     const loadResult = await StoreDataManager.loadFromDatabase();
     if (loadResult.success && loadResult.recordCount > 0) {
       console.log(`Loaded ${loadResult.recordCount} existing records from database`);
-      
+
       // Check if we have any data to display after loading
       const currentStoreData = StoreDataManager.getCurrentStoreData();
       if (currentStoreData.data.length === 0) {
@@ -58,12 +58,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         StoreUI.showEmptyStoreMessage('all');
         return;
       }
-      
+
       // Load and analyze data
       await refreshAnalytics();
     } else {
       console.log('No existing data in database or load failed');
-      
+
       // Still check if data is available (shouldn't be, but just in case)
       const currentStoreData = StoreDataManager.getCurrentStoreData();
       if (currentStoreData.data.length === 0) {
@@ -71,27 +71,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         StoreUI.showEmptyStoreMessage('all');
         return;
       }
-      
+
       // Load and analyze data if somehow available
       await refreshAnalytics();
     }
-    
+
     // Set up event listeners
     setupEventListeners();
-    
+
     // Initialize all charts
     await initializeAllCharts();
-    
+
     // Initialize product analytics if available
     if (typeof initializeProductAnalytics === 'function') {
       await initializeProductAnalytics();
     } else {
       console.warn('Product analytics not available yet');
     }
-    
+
     // Check for alerts
     checkAndDisplayAlerts();
-    
+
   } catch (error) {
     console.error('Error initializing charts:', error);
     showError('Failed to initialize analytics: ' + error.message);
@@ -103,7 +103,7 @@ async function waitForDependencies() {
   const maxWait = 5000; // 5 seconds
   const checkInterval = 100; // Check every 100ms
   let waited = 0;
-  
+
   while (waited < maxWait) {
     // Check if all required functions are available
     if (typeof loadInvoiceData === 'function' &&
@@ -120,11 +120,11 @@ async function waitForDependencies() {
       }
       return true;
     }
-    
+
     await new Promise(resolve => setTimeout(resolve, checkInterval));
     waited += checkInterval;
   }
-  
+
   throw new Error('Dependencies failed to load in time');
 }
 
@@ -132,31 +132,31 @@ async function waitForDependencies() {
 async function refreshAnalytics() {
   // Get current store data
   const storeData = StoreDataManager.getCurrentStoreData();
-  
+
   if (!storeData || storeData.data.length === 0) {
     console.warn('No data available for current store');
     analytics = null;
     window.analytics = null;
     return;
   }
-  
+
   // Get the current store ID, defaulting to 'all' if undefined
   const currentStoreId = StoreDataManager.currentStore || 'all';
   console.log(`Refreshing analytics with ${storeData.data.length} records for store: ${currentStoreId}`);
-  
+
   const options = {
     volatilityWindow: currentFilters.volatilityWindow,
     filters: currentFilters
   };
-  
+
   // Run analytics on store data
   analytics = await runFullAnalytics(storeData.data, options);
-  
+
   // Make analytics globally accessible for other modules
   window.analytics = analytics;
-  
+
   console.log(`Analytics complete - Total spend: $${analytics.summary.totalSpend.toLocaleString()}, Records: ${analytics.summary.totalRecords}`);
-  
+
   // Update UI elements
   updateSummaryStats();
   updateFilterOptions();
@@ -166,19 +166,19 @@ async function refreshAnalytics() {
 async function initializeAllCharts() {
   // Sprint 1: Price trend with spike annotations
   createPriceTrendChart();
-  
+
   // Sprint 2: Volatility chart
   createVolatilityChart();
-  
+
   // Sprint 2: Budget variance chart
   createBudgetVarianceChart();
-  
+
   // Sprint 3: Supply concentration chart
   createSupplyConcentrationChart();
-  
+
   // Sprint 3: Spend forecast chart
   createSpendForecastChart();
-  
+
   // Sprint 4: Category performance heatmap
   createCategoryHeatmap();
 }
@@ -187,16 +187,16 @@ async function initializeAllCharts() {
 function createPriceTrendChart() {
   const ctx = document.getElementById('priceTrendChart')?.getContext('2d');
   if (!ctx) return;
-  
+
   // Destroy existing chart
   if (charts.priceTrend) charts.priceTrend.destroy();
-  
+
   // Check for data
   if (!analytics || !analytics.data || analytics.data.length === 0) {
     showChartEmptyState(ctx, 'No data available for price trend chart');
     return;
   }
-  
+
   // Aggregate data by month and category
   const monthlyData = {};
   analytics.data.forEach(item => {
@@ -216,18 +216,18 @@ function createPriceTrendChart() {
       });
     }
   });
-  
+
   // Prepare chart data
   const labels = Object.keys(monthlyData).sort();
   const categories = [...new Set(analytics.data.map(d => d.category))].slice(0, 8); // Top 8
-  
+
   const datasets = categories.map((cat, idx) => {
     const data = labels.map(month => {
       const catData = monthlyData[month] && monthlyData[month][cat];
       if (!catData || catData.prices.length === 0) return null;
       return catData.prices.reduce((a, b) => a + b, 0) / catData.prices.length;
     });
-    
+
     // Mark spike points
     const pointBackgroundColors = labels.map(month => {
       const catData = monthlyData[month] && monthlyData[month][cat];
@@ -235,12 +235,12 @@ function createPriceTrendChart() {
       const spike = catData.spikes[0];
       return colorSchemes.spike[spike.direction] || colorSchemes.spike.normal;
     });
-    
+
     const pointRadii = labels.map(month => {
       const catData = monthlyData[month] && monthlyData[month][cat];
       return catData && catData.spikes.length > 0 ? 8 : 3;
     });
-    
+
     return {
       label: cat,
       data,
@@ -254,7 +254,7 @@ function createPriceTrendChart() {
       tension: 0.1
     };
   });
-  
+
   charts.priceTrend = new Chart(ctx, {
     type: 'line',
     data: { labels, datasets },
@@ -307,15 +307,15 @@ function createPriceTrendChart() {
 function createVolatilityChart() {
   const ctx = document.getElementById('volatilityChart')?.getContext('2d');
   if (!ctx) return;
-  
+
   if (charts.volatility) charts.volatility.destroy();
-  
+
   // Check for data
   if (!analytics || !analytics.data || analytics.data.length === 0) {
     showChartEmptyState(ctx, 'No data available for volatility chart');
     return;
   }
-  
+
   // Calculate volatility by category over time
   const volatilityData = {};
   analytics.data.forEach(item => {
@@ -328,10 +328,10 @@ function createVolatilityChart() {
       volatilityData[month][item.category].push(item.volatility);
     }
   });
-  
+
   const labels = Object.keys(volatilityData).sort();
   const categories = [...new Set(analytics.data.map(d => d.category))].slice(0, 5);
-  
+
   const datasets = categories.map((cat, idx) => ({
     label: cat,
     data: labels.map(month => {
@@ -343,7 +343,7 @@ function createVolatilityChart() {
     backgroundColor: colorSchemes.primary[idx].replace('0.8', '0.2'),
     fill: true
   }));
-  
+
   charts.volatility = new Chart(ctx, {
     type: 'line',
     data: { labels, datasets },
@@ -371,9 +371,9 @@ function createVolatilityChart() {
 function createBudgetVarianceChart() {
   const ctx = document.getElementById('budgetVarianceChart')?.getContext('2d');
   if (!ctx) return;
-  
+
   if (charts.budgetVariance) charts.budgetVariance.destroy();
-  
+
   // Check for data
   console.log('Budget variance data:', analytics?.budgetVariance);
   if (!analytics || !analytics.budgetVariance || Object.keys(analytics.budgetVariance).length === 0) {
@@ -381,15 +381,15 @@ function createBudgetVarianceChart() {
     showChartEmptyState(ctx, 'No budget variance data available');
     return;
   }
-  
+
   const variances = Object.entries(analytics.budgetVariance)
     .sort((a, b) => Math.abs(b[1].variancePercent) - Math.abs(a[1].variancePercent))
     .slice(0, 10);
-  
+
   const labels = variances.map(([cat]) => cat);
   const data = variances.map(([, v]) => v.variancePercent);
   const colors = data.map(v => v > 0 ? 'rgba(220, 38, 38, 0.8)' : 'rgba(16, 185, 129, 0.8)');
-  
+
   charts.budgetVariance = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -433,23 +433,52 @@ function createBudgetVarianceChart() {
       }
     }
   });
+
+  // Create budget variance table
+  const budgetTable = document.getElementById('budgetTable');
+  if (budgetTable && variances.length > 0) {
+    budgetTable.innerHTML = `
+      <table class="drill-down-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Actual Spend</th>
+            <th>Projected Spend</th>
+            <th>Variance</th>
+            <th>Variance %</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${variances.map(([cat, v]) => `
+            <tr class="${Math.abs(v.variancePercent) < 0.01 ? '' : v.variancePercent > 0 ? 'over-budget' : 'under-budget'}">
+              <td>${cat}</td>
+              <td>$${v.actual.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              <td>$${v.projected.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              <td>$${v.variance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              <td>${v.variancePercent.toFixed(2)}%</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
 }
 
 // Sprint 3: Supply concentration chart
 function createSupplyConcentrationChart() {
   const ctx = document.getElementById('concentrationChart')?.getContext('2d');
   if (!ctx) return;
-  
+
   if (charts.concentration) charts.concentration.destroy();
-  
+
   // Check for data
   if (!analytics || !analytics.supplyConcentration || !analytics.supplyConcentration.vendors || analytics.supplyConcentration.vendors.length === 0) {
     showChartEmptyState(ctx, 'No vendor concentration data available');
     return;
   }
-  
+
   const topVendors = analytics.supplyConcentration.vendors.slice(0, 10);
-  
+
   charts.concentration = new Chart(ctx, {
     type: 'doughnut',
     data: {
@@ -505,33 +534,33 @@ function createSupplyConcentrationChart() {
 function createSpendForecastChart() {
   const ctx = document.getElementById('forecastChart')?.getContext('2d');
   if (!ctx) return;
-  
+
   if (charts.forecast) charts.forecast.destroy();
-  
+
   // Check for data
   if (!analytics || !analytics.forecastData || analytics.forecastData.length === 0) {
     showChartEmptyState(ctx, 'Insufficient data for spend forecast');
     return;
   }
-  
+
   // Historical data
   const historicalData = analytics.forecastData;
-  
+
   // Simple linear forecast for next 3 months
   const n = historicalData.length;
   const xSum = historicalData.reduce((sum, _, i) => sum + i, 0);
   const ySum = historicalData.reduce((sum, d) => sum + d.y, 0);
   const xySum = historicalData.reduce((sum, d, i) => sum + i * d.y, 0);
   const xxSum = historicalData.reduce((sum, _, i) => sum + i * i, 0);
-  
+
   const slope = (n * xySum - xSum * ySum) / (n * xxSum - xSum * xSum);
   const intercept = (ySum - slope * xSum) / n;
-  
+
   // Generate forecast
   const forecastMonths = 3;
   const lastDate = new Date(historicalData[n - 1].ds);
   const forecastData = [];
-  
+
   for (let i = 1; i <= forecastMonths; i++) {
     const forecastDate = new Date(lastDate);
     forecastDate.setMonth(forecastDate.getMonth() + i);
@@ -541,10 +570,10 @@ function createSpendForecastChart() {
       forecast: true
     });
   }
-  
+
   const allData = [...historicalData, ...forecastData];
   const labels = allData.map(d => d.ds.slice(0, 7));
-  
+
   charts.forecast = new Chart(ctx, {
     type: 'line',
     data: {
@@ -590,32 +619,32 @@ function createSpendForecastChart() {
 function createCategoryHeatmap() {
   const ctx = document.getElementById('categoryHeatmap')?.getContext('2d');
   if (!ctx) return;
-  
+
   if (charts.heatmap) charts.heatmap.destroy();
-  
+
   // Check for data
   if (!analytics || !analytics.categoryPerformance || Object.keys(analytics.categoryPerformance).length === 0) {
     showChartEmptyState(ctx, 'No category performance data available');
     return;
   }
-  
+
   // Prepare weekly data by category
   const weeklyData = {};
   analytics.data.forEach(item => {
     const week = getWeekNumber(item.invoiceDate);
     const weekKey = `${item.invoiceDate.getFullYear()}-W${week}`;
-    
+
     if (!weeklyData[weekKey]) weeklyData[weekKey] = {};
     if (!weeklyData[weekKey][item.category]) {
       weeklyData[weekKey][item.category] = 0;
     }
     weeklyData[weekKey][item.category] += item.extPrice;
   });
-  
+
   // Get last 12 weeks
   const weeks = Object.keys(weeklyData).sort().slice(-12);
   const categories = [...new Set(analytics.data.map(d => d.category))].slice(0, 8);
-  
+
   // Create matrix data
   const matrixData = [];
   categories.forEach((cat, y) => {
@@ -628,10 +657,10 @@ function createCategoryHeatmap() {
       });
     });
   });
-  
+
   // Find max value for color scaling
   const maxValue = Math.max(...matrixData.map(d => d.v));
-  
+
   charts.heatmap = new Chart(ctx, {
     type: 'matrix',
     data: {
@@ -708,7 +737,7 @@ function setupEventListeners() {
       }
     });
   }
-  
+
   // Category filter
   const categoryFilter = document.getElementById('categoryFilter');
   if (categoryFilter) {
@@ -723,22 +752,22 @@ function setupEventListeners() {
       }
     });
   }
-  
+
   // Date range
   const startDate = document.getElementById('startDate');
   const endDate = document.getElementById('endDate');
-  
+
   if (startDate) {
     startDate.addEventListener('change', async (e) => {
       const newStartDate = e.target.value;
-      
+
       // Validate: start date should be before or equal to end date
       if (currentFilters.endDate && newStartDate > currentFilters.endDate) {
         showError('Start date must be before or equal to end date');
         e.target.value = currentFilters.startDate || '';
         return;
       }
-      
+
       setFiltersLoading(true);
       try {
         currentFilters.startDate = newStartDate;
@@ -749,18 +778,18 @@ function setupEventListeners() {
       }
     });
   }
-  
+
   if (endDate) {
     endDate.addEventListener('change', async (e) => {
       const newEndDate = e.target.value;
-      
+
       // Validate: end date should be after or equal to start date
       if (currentFilters.startDate && newEndDate < currentFilters.startDate) {
         showError('End date must be after or equal to start date');
         e.target.value = currentFilters.endDate || '';
         return;
       }
-      
+
       setFiltersLoading(true);
       try {
         currentFilters.endDate = newEndDate;
@@ -771,19 +800,19 @@ function setupEventListeners() {
       }
     });
   }
-  
+
   // Export buttons
   const exportCsv = document.getElementById('exportCsv');
   if (exportCsv) {
     exportCsv.addEventListener('click', () => exportDataAsCSV());
   }
-  
+
   // Alert settings
   const saveSettings = document.getElementById('saveSettings');
   if (saveSettings) {
     saveSettings.addEventListener('click', saveAlertSettings);
   }
-  
+
   // Chart click handlers for drill-down
   if (charts.priceTrend && charts.priceTrend.canvas) {
     charts.priceTrend.canvas.onclick = (evt) => handleChartClick(evt, charts.priceTrend);
@@ -795,12 +824,12 @@ function updateFilterOptions() {
   const categoryFilter = document.getElementById('categoryFilter');
   if (categoryFilter && analytics) {
     const categories = [...new Set(analytics.data.map(d => d.category))].sort();
-    
+
     // Clear existing options except 'all'
     while (categoryFilter.options.length > 1) {
       categoryFilter.remove(1);
     }
-    
+
     // Add category options
     categories.forEach(cat => {
       const option = document.createElement('option');
@@ -814,12 +843,12 @@ function updateFilterOptions() {
 // Update summary statistics
 function updateSummaryStats() {
   if (!analytics) return;
-  
+
   const updateElement = (id, value) => {
     const el = document.getElementById(id);
     if (el) el.textContent = value;
   };
-  
+
   updateElement('totalSpend', '$' + analytics.summary.totalSpend.toLocaleString());
   updateElement('totalRecords', analytics.summary.totalRecords.toLocaleString());
   updateElement('uniqueCategories', analytics.summary.uniqueCategories);
@@ -834,16 +863,16 @@ function updateSummaryStats() {
 function checkAndDisplayAlerts() {
   const alerts = AlertConfig.checkAlerts(analytics);
   const alertContainer = document.getElementById('alertContainer');
-  
+
   if (!alertContainer) return;
-  
+
   alertContainer.innerHTML = '';
-  
+
   if (alerts.length === 0) {
     alertContainer.innerHTML = '<div class="alert-info">No alerts at this time</div>';
     return;
   }
-  
+
   alerts.forEach(alert => {
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${alert.severity}`;
@@ -862,7 +891,7 @@ function saveAlertSettings() {
   const threshConc = document.getElementById('threshConc');
   const emailEnabled = document.getElementById('emailEnabled');
   const emailRecipients = document.getElementById('emailRecipients');
-  
+
   const config = {
     spikeZThreshold: threshZ ? parseFloat(threshZ.value) : 2,
     budgetVarianceThreshold: threshVar ? parseFloat(threshVar.value) : 10,
@@ -870,7 +899,7 @@ function saveAlertSettings() {
     emailEnabled: emailEnabled ? emailEnabled.checked : false,
     emailRecipients: emailRecipients ? emailRecipients.value.split(',').map(e => e.trim()) : []
   };
-  
+
   AlertConfig.save(config);
   checkAndDisplayAlerts();
   showSuccess('Alert settings saved successfully');
@@ -879,7 +908,7 @@ function saveAlertSettings() {
 // Export functionality
 function exportDataAsCSV() {
   if (!analytics) return;
-  
+
   const csv = exportToCSV(analytics.data, true);
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
@@ -893,20 +922,20 @@ function exportDataAsCSV() {
 // Drill-down functionality
 function handleChartClick(evt, chart) {
   const points = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
-  
+
   if (points.length === 0) return;
-  
+
   const point = points[0];
   const label = chart.data.labels[point.index];
   const dataset = chart.data.datasets[point.datasetIndex];
   const category = dataset.label;
-  
+
   // Filter data for drill-down
   const filteredData = analytics.data.filter(item => {
     const itemMonth = item.invoiceDate.toISOString().slice(0, 7);
     return itemMonth === label && item.category === category;
   });
-  
+
   // Display in modal or table
   displayDrillDownData(filteredData, `${category} - ${label}`);
 }
@@ -916,18 +945,18 @@ function displayDrillDownData(data, title) {
   const modal = document.getElementById('drillDownModal');
   const modalTitle = document.getElementById('modalTitle');
   const modalBody = document.getElementById('modalBody');
-  
+
   if (!modal || !modalTitle || !modalBody) {
     console.log('Drill-down data:', data);
     return;
   }
-  
+
   modalTitle.textContent = title;
-  
+
   // Create table
   const table = document.createElement('table');
   table.className = 'drill-down-table';
-  
+
   // Headers
   const headers = ['Date', 'Product', 'Vendor', 'Qty', 'Unit Price', 'Ext Price'];
   const thead = document.createElement('thead');
@@ -939,7 +968,7 @@ function displayDrillDownData(data, title) {
   });
   thead.appendChild(headerRow);
   table.appendChild(thead);
-  
+
   // Body
   const tbody = document.createElement('tbody');
   data.forEach(item => {
@@ -956,10 +985,10 @@ function displayDrillDownData(data, title) {
     tbody.appendChild(row);
   });
   table.appendChild(tbody);
-  
+
   modalBody.innerHTML = '';
   modalBody.appendChild(table);
-  
+
   // Show modal
   modal.style.display = 'block';
 }
@@ -968,7 +997,7 @@ function displayDrillDownData(data, title) {
 function showChartEmptyState(ctx, message) {
   // Clear the canvas
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  
+
   // Draw message
   ctx.save();
   ctx.fillStyle = '#6B7280';
@@ -976,7 +1005,7 @@ function showChartEmptyState(ctx, message) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(message, ctx.canvas.width / 2, ctx.canvas.height / 2);
-  
+
   // Draw icon
   ctx.font = '48px system-ui, -apple-system, sans-serif';
   ctx.fillText('📊', ctx.canvas.width / 2, ctx.canvas.height / 2 - 50);
@@ -991,7 +1020,7 @@ function setFiltersLoading(isLoading) {
     'startDate',
     'endDate'
   ];
-  
+
   filterControls.forEach(id => {
     const element = document.getElementById(id);
     if (element) {
@@ -1029,7 +1058,7 @@ function showNotification(message, type) {
   notification.className = `notification notification-${type}`;
   notification.textContent = message;
   document.body.appendChild(notification);
-  
+
   setTimeout(() => {
     notification.classList.add('fade-out');
     setTimeout(() => notification.remove(), 300);
