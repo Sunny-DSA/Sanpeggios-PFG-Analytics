@@ -140,7 +140,9 @@ async function refreshAnalytics() {
     return;
   }
   
-  console.log(`Refreshing analytics with ${storeData.data.length} records for store: ${storeData.storeId}`);
+  // Get the current store ID, defaulting to 'all' if undefined
+  const currentStoreId = StoreDataManager.currentStore || 'all';
+  console.log(`Refreshing analytics with ${storeData.data.length} records for store: ${currentStoreId}`);
   
   const options = {
     volatilityWindow: currentFilters.volatilityWindow,
