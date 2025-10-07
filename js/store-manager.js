@@ -296,6 +296,7 @@ const StoreDataManager = {
           }
 
           // Convert database record to CSV-compatible format expected by analytics
+          // Ensure numeric values are properly parsed
           const convertedRecord = {
             'Invoice Number': record['Invoice Number'],
             'Invoice Date': record['Invoice Date'],
@@ -310,10 +311,10 @@ const StoreDataManager = {
             // Map database fields to CSV field names expected by analytics
             'Product Class Description': record['Category'],  // Category -> Product Class Description
             'Pack Size': record['Pack Size'],
-            'Qty Shipped': record['Quantity'],  // Quantity -> Qty Shipped
-            'Qty Ordered': record['Quantity'],  // Same as shipped for stored data
-            'Unit Price': record['Unit Price'],
-            'Ext. Price': record['Extended Price'],  // Extended Price -> Ext. Price
+            'Qty Shipped': parseFloat(record['Quantity']) || 0,  // Quantity -> Qty Shipped (ensure numeric)
+            'Qty Ordered': parseFloat(record['Quantity']) || 0,  // Same as shipped for stored data
+            'Unit Price': parseFloat(record['Unit Price']) || 0,  // Ensure numeric
+            'Ext. Price': parseFloat(record['Extended Price']) || 0,  // Extended Price -> Ext. Price (ensure numeric)
             'Manufacturer Name': record['Vendor'],  // Vendor -> Manufacturer Name
             'Vendor Code': record['Vendor Code']
           };
