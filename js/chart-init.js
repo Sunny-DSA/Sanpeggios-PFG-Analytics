@@ -129,6 +129,8 @@ async function refreshAnalytics() {
     return;
   }
   
+  console.log(`Refreshing analytics with ${storeData.data.length} records for store: ${storeData.storeId}`);
+  
   const options = {
     volatilityWindow: currentFilters.volatilityWindow,
     filters: currentFilters
@@ -139,6 +141,8 @@ async function refreshAnalytics() {
   
   // Make analytics globally accessible for other modules
   window.analytics = analytics;
+  
+  console.log(`Analytics complete - Total spend: $${analytics.summary.totalSpend.toLocaleString()}, Records: ${analytics.summary.totalRecords}`);
   
   // Update UI elements
   updateSummaryStats();

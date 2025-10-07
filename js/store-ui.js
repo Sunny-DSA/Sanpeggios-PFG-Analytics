@@ -189,6 +189,18 @@ const StoreUI = {
       }
       
       // Refresh current store view with the reloaded data
+      // Force reload all data from database after upload
+      console.log('Reloading all data from database after upload...');
+      const loadResult = await StoreDataManager.loadFromDatabase();
+      console.log(`Reloaded ${loadResult.recordCount} total records from database`);
+      
+      // Refresh analytics with all data
+      await refreshAnalytics();
+      await initializeAllCharts();
+      if (typeof initializeProductAnalytics === 'function') {
+        await initializeProductAnalytics();
+      }
+      
       await this.refreshStoreView(StoreDataManager.currentStore);
       this.updateFileList(StoreDataManager.currentStore);
       this.updateStoreKPIs(StoreDataManager.currentStore);
