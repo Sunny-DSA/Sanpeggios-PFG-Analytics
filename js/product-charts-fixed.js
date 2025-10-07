@@ -25,14 +25,14 @@ const productColorSchemes = {
 async function initializeProductAnalytics() {
   // Check if analytics is available in global scope or window
   const analyticsData = window.analytics || analytics;
-  
+
   if (typeof analyticsData === 'undefined' || !analyticsData || !analyticsData.data) {
     console.warn('Analytics data not available for product analysis');
     return;
   }
-  
+
   console.log('Initializing product analytics with', analyticsData.data.length, 'records');
-  
+
   // Perform all product analyses
   const productMetrics = ProductAnalytics.analyzeProductPerformance(analyticsData.data);
   const abcAnalysis = ProductAnalytics.performABCAnalysis(productMetrics);
@@ -41,7 +41,7 @@ async function initializeProductAnalytics() {
   const substitutions = ProductAnalytics.findSubstitutionOpportunities(productMetrics);
   const seasonality = ProductAnalytics.detectSeasonalPatterns(analyticsData.data);
   const lifecycle = ProductAnalytics.analyzeProductLifecycle(productMetrics);
-  
+
   productAnalyticsData = {
     productMetrics: productMetrics,
     abcAnalysis: abcAnalysis,
@@ -49,9 +49,10 @@ async function initializeProductAnalytics() {
     packSizeAnalysis: packSizeAnalysis,
     substitutions: substitutions,
     seasonality: seasonality,
-    lifecycle: lifecycle
+    lifecycle: lifecycle,
+    rawData: analyticsData.data // Store raw data for quality indicators
   };
-  
+
   // Create all product charts
   createABCChart();
   createBrandPerformanceChart();
@@ -59,8 +60,12 @@ async function initializeProductAnalytics() {
   createTopProductsTable();
   createSubstitutionTable();
   createBrandComparisonChart();
+  createDataQualityIndicators(); // New: Data Quality
+  createPackSizeOptimizationChart(); // New: Pack Size Optimization
+  createVendorDiversificationChart(); // New: Vendor Diversification
+  setupProductFilters(); // New: Product Table Filters
   updateProductSearch();
-  
+
   // Update total potential savings
   updateTotalSavings();
 }
@@ -72,15 +77,16 @@ function createABCChart() {
     console.warn('ABC chart canvas not found');
     return;
   }
-  
+
   if (!productAnalyticsData) {
     console.warn('Product analytics data not available');
     return;
   }
-  
+
   const data = productAnalyticsData.abcAnalysis.products.slice(0, 20); // Top 20
-  
-  new Chart(ctx.getContext('2d'), {
+
+  // Make the ABC chart interactive
+  const abcChartInstance = new Chart(ctx.getContext('2d'), {
     type: 'bar',
     data: {
       labels: data.map(function(p) { return p.product.substring(0, 30); }),
@@ -123,6 +129,19 @@ function createABCChart() {
                 ];
               }
               return '';
+            }
+          }
+        },
+        // Add click handler for interactivity
+        ... {
+          onClick: function(event, elements) {
+            if (elements.length > 0) {
+              const chart = this;
+              const elementIndex = elements[0].index;
+              const productData = data[elementIndex];
+              if (productData && productData.product) {
+                showProductDetails(encodeURIComponent(productData.product));
+              }
             }
           }
         }
@@ -168,16 +187,16 @@ function createBrandPerformanceChart() {
     console.warn('Brand chart canvas not found');
     return;
   }
-  
+
   if (!productAnalyticsData) {
     console.warn('Product analytics data not available');
     return;
   }
-  
+
   const brands = Object.values(productAnalyticsData.brandAnalysis)
     .sort(function(a, b) { return b.totalSpend - a.totalSpend; })
     .slice(0, 10);
-  
+
   new Chart(ctx.getContext('2d'), {
     type: 'bubble',
     data: {
@@ -246,14 +265,14 @@ function createProductLifecycleChart() {
     console.warn('Lifecycle chart canvas not found');
     return;
   }
-  
+
   if (!productAnalyticsData) {
     console.warn('Product analytics data not available');
     return;
   }
-  
+
   const lifecycle = productAnalyticsData.lifecycle;
-  
+
   new Chart(ctx.getContext('2d'), {
     type: 'doughnut',
     data: {
@@ -307,23 +326,23 @@ function createBrandComparisonChart() {
     console.warn('Brand comparison chart canvas not found');
     return;
   }
-  
+
   if (!productAnalyticsData) {
     console.warn('Product analytics data not available');
     return;
   }
-  
+
   // Get top 5 brands
   const topBrands = Object.values(productAnalyticsData.brandAnalysis)
     .sort(function(a, b) { return b.totalSpend - a.totalSpend; })
     .slice(0, 5);
-  
+
   // Normalize metrics for radar chart
   const maxSpend = Math.max.apply(null, topBrands.map(function(b) { return b.totalSpend; }));
   const maxProducts = Math.max.apply(null, topBrands.map(function(b) { return b.productCount; }));
   const maxPrice = Math.max.apply(null, topBrands.map(function(b) { return b.avgPrice; }));
   const maxCategories = Math.max.apply(null, topBrands.map(function(b) { return b.categoryCount; }));
-  
+
   new Chart(ctx.getContext('2d'), {
     type: 'radar',
     data: {
@@ -365,13 +384,239 @@ function createBrandComparisonChart() {
   });
 }
 
+// Data Quality Indicators
+function createDataQualityIndicators() {
+  const container = document.getElementById('dataQualityIndicators');
+  if (!container || !productAnalyticsData || !productAnalyticsData.rawData) {
+    console.warn('Data quality indicators container or data not found');
+    return;
+  }
+
+  const data = productAnalyticsData.rawData;
+  const totalRecords = data.length;
+
+  // Calculate data quality metrics
+  const dateRange = {
+    min: new Date(Math.min.apply(null, data.map(function(d) { return new Date(d.invoiceDate); }))),
+    max: new Date(Math.max.apply(null, data.map(function(d) { return new Date(d.invoiceDate); })))
+  };
+
+  const daysCovered = Math.ceil((dateRange.max - dateRange.min) / (1000 * 60 * 60 * 24)) + 1; // +1 for inclusive range
+  const expectedRecordsPerDay = 5; // Heuristic: estimate of orders per day
+  const expectedTotalRecords = daysCovered * expectedRecordsPerDay;
+  const completeness = Math.min(100, (totalRecords / expectedTotalRecords) * 100);
+
+  const categoriesWithData = new Set(data.map(function(d) { return d.category; })).size;
+  const productsWithData = new Set(data.map(function(d) { return d.productDescription; })).size;
+  const vendorsWithData = new Set(data.map(function(d) { return d.vendor; })).size;
+
+  const missingBrands = data.filter(function(d) { return !d.brand || d.brand === 'Generic'; }).length;
+  const dataQualityScore = totalRecords > 0 ? 100 - (missingBrands / totalRecords * 100) : 100;
+
+  container.innerHTML = '<div class="data-quality-panel">' +
+    '<h4>📊 Data Quality Overview</h4>' +
+    '<div class="quality-grid">' +
+      '<div class="quality-card">' +
+        '<div class="quality-label">Data Completeness</div>' +
+        '<div class="quality-value ' + (completeness > 70 ? 'good' : completeness > 40 ? 'warning' : 'poor') + '">' +
+          completeness.toFixed(1) + '%' +
+        '</div>' +
+        '<div class="quality-detail">' + totalRecords + ' records over ' + daysCovered + ' days</div>' +
+      '</div>' +
+      '<div class="quality-card">' +
+        '<div class="quality-label">Data Quality Score</div>' +
+        '<div class="quality-value ' + (dataQualityScore > 80 ? 'good' : dataQualityScore > 60 ? 'warning' : 'poor') + '">' +
+          dataQualityScore.toFixed(1) + '%' +
+        '</div>' +
+        '<div class="quality-detail">' + (totalRecords - missingBrands) + ' records with brand info</div>' +
+      '</div>' +
+      '<div class="quality-card">' +
+        '<div class="quality-label">Coverage</div>' +
+        '<div class="quality-value good">' + categoriesWithData + '</div>' +
+        '<div class="quality-detail">Categories • ' + productsWithData + ' Products • ' + vendorsWithData + ' Vendors</div>' +
+      '</div>' +
+      '<div class="quality-card">' +
+        '<div class="quality-label">Date Range</div>' +
+        '<div class="quality-value">' + daysCovered + ' days</div>' +
+        '<div class="quality-detail">' + dateRange.min.toLocaleDateString() + ' to ' + dateRange.max.toLocaleDateString() + '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+// Pack Size Optimization Chart
+function createPackSizeOptimizationChart() {
+  const ctx = document.getElementById('packSizeChart');
+  if (!ctx) {
+    console.warn('Pack size chart canvas not found');
+    return;
+  }
+
+  if (!productAnalyticsData || !productAnalyticsData.packSizeAnalysis) {
+    console.warn('Pack size analysis not available');
+    return;
+  }
+
+  // Get pack sizes with cost per unit data
+  const packSizes = Object.values(productAnalyticsData.packSizeAnalysis)
+    .filter(function(ps) { return ps.avgCostPerUnit > 0; })
+    .sort(function(a, b) { return b.totalSpend - a.totalSpend; })
+    .slice(0, 15);
+
+  if (packSizes.length === 0) {
+    ctx.getContext('2d').fillText('No pack size data available', 10, 50);
+    return;
+  }
+
+  new Chart(ctx.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: packSizes.map(function(ps) { return ps.category + ' - ' + ps.packSize; }),
+      datasets: [{
+        label: 'Cost per Unit ($)',
+        data: packSizes.map(function(ps) { return ps.avgCostPerUnit; }),
+        backgroundColor: packSizes.map(function(ps) {
+          return ps.avgCostPerUnit < 1 ? 'rgba(16, 185, 129, 0.8)' :
+                 ps.avgCostPerUnit < 3 ? 'rgba(249, 115, 22, 0.8)' :
+                 'rgba(220, 38, 38, 0.8)';
+        })
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        title: {
+          display: true,
+          text: 'Cost Efficiency by Pack Size'
+        },
+        tooltip: {
+          callbacks: {
+            afterLabel: function(context) {
+              const ps = packSizes[context.dataIndex];
+              return [
+                'Total Spend: $' + ps.totalSpend.toLocaleString(),
+                'Products: ' + ps.productCount
+              ];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Cost per Unit ($)' },
+          ticks: {
+            callback: function(value) { return '$' + value.toFixed(2); }
+          }
+        }
+      }
+    }
+  });
+}
+
+// Vendor Diversification Chart
+function createVendorDiversificationChart() {
+  const ctx = document.getElementById('vendorDiversificationChart');
+  if (!ctx) {
+    console.warn('Vendor diversification chart canvas not found');
+    return;
+  }
+
+  if (!productAnalyticsData || !productAnalyticsData.rawData) {
+    console.warn('Product data not available');
+    return;
+  }
+
+  // Calculate vendor diversification by category
+  const categoryVendors = {};
+  productAnalyticsData.rawData.forEach(function(item) {
+    const cat = item.category || 'Unknown';
+    if (!categoryVendors[cat]) {
+      categoryVendors[cat] = new Set();
+    }
+    categoryVendors[cat].add(item.vendor);
+  });
+
+  // Calculate diversification score (1 - Herfindahl index normalized)
+  const diversificationScores = Object.keys(categoryVendors).map(function(cat) {
+    const vendorsInCat = Array.from(categoryVendors[cat]);
+    const vendorCounts = {};
+
+    productAnalyticsData.rawData.forEach(function(item) {
+      if (item.category === cat) {
+        vendorCounts[item.vendor] = (vendorCounts[item.vendor] || 0) + 1;
+      }
+    });
+
+    const total = Object.values(vendorCounts).reduce(function(a, b) { return a + b; }, 0);
+    if (total === 0) return { category: cat, score: 0, vendorCount: 0 };
+
+    const herfindahl = Object.values(vendorCounts).reduce(function(sum, count) {
+      const share = count / total;
+      return sum + (share * share);
+    }, 0);
+
+    const diversificationScore = (1 - herfindahl) * 100;
+
+    return {
+      category: cat,
+      score: diversificationScore,
+      vendorCount: vendorsInCat.length
+    };
+  }).sort(function(a, b) { return b.score - a.score; });
+
+  new Chart(ctx.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: diversificationScores.map(function(d) { return d.category; }),
+      datasets: [{
+        label: 'Diversification Score',
+        data: diversificationScores.map(function(d) { return d.score; }),
+        backgroundColor: diversificationScores.map(function(d) {
+          return d.score > 60 ? 'rgba(16, 185, 129, 0.8)' :
+                 d.score > 30 ? 'rgba(249, 115, 22, 0.8)' :
+                 'rgba(220, 38, 38, 0.8)';
+        })
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: {
+          display: true,
+          text: 'Vendor Diversification by Category'
+        },
+        tooltip: {
+          callbacks: {
+            afterLabel: function(context) {
+              const d = diversificationScores[context.dataIndex];
+              return 'Vendors: ' + d.vendorCount;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          title: { display: true, text: 'Diversification Score (0-100)' },
+          beginAtZero: true,
+          max: 100
+        }
+      }
+    }
+  });
+}
+
+
 // Top Products Table
-function createTopProductsTable() {
+function createTopProductsTable(productsToDisplay = null) {
   const container = document.getElementById('topProductsTable');
   if (!container || !productAnalyticsData) return;
-  
-  const products = productAnalyticsData.abcAnalysis.products.slice(0, 15);
-  
+
+  // Use provided products or default to top 15 from ABC analysis
+  const products = productsToDisplay || productAnalyticsData.abcAnalysis.products.slice(0, 15);
+
   let html = '<table class="data-table">' +
     '<thead>' +
       '<tr>' +
@@ -386,18 +631,21 @@ function createTopProductsTable() {
       '</tr>' +
     '</thead>' +
     '<tbody>';
-  
+
   products.forEach(function(product) {
-    const lastPriceChange = product.priceChanges[product.priceChanges.length - 1];
-    const priceChangeHtml = lastPriceChange ? 
+    // Ensure priceChanges is an array and has elements before accessing
+    const lastPriceChange = Array.isArray(product.priceChanges) && product.priceChanges.length > 0 ?
+                            product.priceChanges[product.priceChanges.length - 1] : null;
+
+    const priceChangeHtml = lastPriceChange ?
       '<span class="' + (lastPriceChange.changePercent > 0 ? 'negative' : 'positive') + '">' +
         (lastPriceChange.changePercent > 0 ? '↑' : '↓') + ' ' +
         Math.abs(lastPriceChange.changePercent).toFixed(1) + '%' +
       '</span>' : '-';
-    
-    const statusClass = product.status === 'Active' ? 'positive' : 
+
+    const statusClass = product.status === 'Active' ? 'positive' :
                        product.status === 'Slow Moving' ? 'warning' : 'negative';
-    
+
     html += '<tr>' +
       '<td>' + product.description.substring(0, 40) + '</td>' +
       '<td>' + (product.brand || '-') + '</td>' +
@@ -413,7 +661,7 @@ function createTopProductsTable() {
       '</td>' +
     '</tr>';
   });
-  
+
   html += '</tbody></table>';
   container.innerHTML = html;
 }
@@ -422,14 +670,14 @@ function createTopProductsTable() {
 function createSubstitutionTable() {
   const container = document.getElementById('substitutionTable');
   if (!container || !productAnalyticsData) return;
-  
+
   const substitutions = productAnalyticsData.substitutions.slice(0, 10);
-  
+
   if (substitutions.length === 0) {
     container.innerHTML = '<p class="text-muted">No significant substitution opportunities found.</p>';
     return;
   }
-  
+
   let html = '<table class="data-table">' +
     '<thead>' +
       '<tr>' +
@@ -442,7 +690,7 @@ function createSubstitutionTable() {
       '</tr>' +
     '</thead>' +
     '<tbody>';
-  
+
   substitutions.forEach(function(sub) {
     html += '<tr>' +
       '<td>' +
@@ -459,7 +707,7 @@ function createSubstitutionTable() {
       '<td class="number positive">$' + sub.annualSavings.toLocaleString() + '</td>' +
     '</tr>';
   });
-  
+
   html += '</tbody></table>';
   container.innerHTML = html;
 }
@@ -468,29 +716,29 @@ function createSubstitutionTable() {
 function updateProductSearch() {
   const searchInput = document.getElementById('productSearch');
   const searchResults = document.getElementById('searchResults');
-  
+
   if (!searchInput || !productAnalyticsData) return;
-  
+
   const products = Object.keys(productAnalyticsData.productMetrics);
-  
+
   searchInput.addEventListener('input', function(e) {
     const query = e.target.value.toLowerCase();
     if (query.length < 2) {
       searchResults.innerHTML = '';
       return;
     }
-    
+
     const matches = products
       .filter(function(p) { return p.toLowerCase().includes(query); })
       .slice(0, 10);
-    
+
     if (matches.length === 0) {
       searchResults.innerHTML = '<div class="search-no-results">No products found</div>';
       return;
     }
-    
+
     searchResults.innerHTML = matches.map(function(product) {
-      return '<div class="search-result" onclick="showProductDetails(\'' + 
+      return '<div class="search-result" onclick="showProductDetails(\'' +
         encodeURIComponent(product) + '\')">' + product + '</div>';
     }).join('');
   });
@@ -500,20 +748,23 @@ function updateProductSearch() {
 function showProductDetails(encodedProduct) {
   const product = decodeURIComponent(encodedProduct);
   const productData = productAnalyticsData.productMetrics[product];
-  
-  if (!productData) return;
-  
+
+  if (!productData) {
+    console.warn(`Product data not found for: ${product}`);
+    return;
+  }
+
   const modal = document.getElementById('productModal');
   const modalTitle = document.getElementById('productModalTitle');
   const modalBody = document.getElementById('productModalBody');
-  
+
   if (!modal || !modalTitle || !modalBody) {
-    console.log('Product details:', productData);
+    console.log('Product details:', productData); // Fallback if modal elements are missing
     return;
   }
-  
+
   modalTitle.textContent = product;
-  
+
   // Create detailed view
   let detailsHtml = '<div class="product-details">' +
     '<div class="detail-grid">' +
@@ -522,11 +773,11 @@ function showProductDetails(encodedProduct) {
         '<p><strong>Brand:</strong> ' + (productData.brand || 'N/A') + '</p>' +
         '<p><strong>Vendor:</strong> ' + productData.vendor + '</p>' +
         '<p><strong>Pack Size:</strong> ' + productData.packSize + '</p>' +
-        '<p><strong>Status:</strong> <span class="' + 
-          (productData.status === 'Active' ? 'positive' : 'negative') + '">' + 
+        '<p><strong>Status:</strong> <span class="' +
+          (productData.status === 'Active' ? 'positive' : 'negative') + '">' +
           productData.status + '</span></p>' +
       '</div>' +
-      
+
       '<div class="detail-card">' +
         '<h4>Performance Metrics</h4>' +
         '<p><strong>Total Spend:</strong> $' + productData.totalSpend.toLocaleString() + '</p>' +
@@ -534,17 +785,17 @@ function showProductDetails(encodedProduct) {
         '<p><strong>Avg Price:</strong> $' + productData.avgPrice.toFixed(2) + '</p>' +
         '<p><strong>Order Count:</strong> ' + productData.orderCount + '</p>' +
       '</div>' +
-      
+
       '<div class="detail-card">' +
         '<h4>Pricing Analytics</h4>' +
         '<p><strong>Price Volatility:</strong> ' + (productData.priceVolatility * 100).toFixed(1) + '%</p>' +
         '<p><strong>Price Changes:</strong> ' + productData.priceChanges.length + '</p>' +
-        '<p><strong>Last Change:</strong> ' + 
-          (productData.priceChanges.length > 0 ? 
-          productData.priceChanges[productData.priceChanges.length - 1].changePercent.toFixed(1) + '%' : 
+        '<p><strong>Last Change:</strong> ' +
+          (productData.priceChanges.length > 0 ?
+          productData.priceChanges[productData.priceChanges.length - 1].changePercent.toFixed(1) + '%' :
           'None') + '</p>' +
       '</div>' +
-      
+
       '<div class="detail-card">' +
         '<h4>Ordering Pattern</h4>' +
         '<p><strong>First Order:</strong> ' + productData.firstSeen.toLocaleDateString() + '</p>' +
@@ -553,11 +804,11 @@ function showProductDetails(encodedProduct) {
         '<p><strong>Product Age:</strong> ' + productData.productAge + ' days</p>' +
       '</div>' +
     '</div>' +
-    
+
     '<div class="chart-container mt-3">' +
       '<canvas id="productTrendChart"></canvas>' +
     '</div>';
-  
+
   if (productData.priceChanges.length > 0) {
     detailsHtml += '<h4 class="mt-3">Price History</h4>' +
       '<table class="data-table">' +
@@ -570,30 +821,35 @@ function showProductDetails(encodedProduct) {
           '</tr>' +
         '</thead>' +
         '<tbody>';
-    
+
     productData.priceChanges.forEach(function(change) {
       detailsHtml += '<tr>' +
         '<td>' + change.date.toLocaleDateString() + '</td>' +
         '<td>$' + change.oldPrice.toFixed(2) + '</td>' +
         '<td>$' + change.newPrice.toFixed(2) + '</td>' +
         '<td class="' + (change.changePercent > 0 ? 'negative' : 'positive') + '">' +
-          (change.changePercent > 0 ? '↑' : '↓') + ' ' + 
+          (change.changePercent > 0 ? '↑' : '↓') + ' ' +
           Math.abs(change.changePercent).toFixed(1) + '%' +
         '</td>' +
       '</tr>';
     });
-    
+
     detailsHtml += '</tbody></table>';
   }
-  
+
   detailsHtml += '</div>';
-  
+
   modalBody.innerHTML = detailsHtml;
   modal.style.display = 'block';
-  
+
   // Create product trend chart
   setTimeout(function() {
-    ProductAnalytics.createProductTrendChart(productData, 'productTrendChart');
+    // Ensure ProductAnalytics.createProductTrendChart is available
+    if (typeof ProductAnalytics !== 'undefined' && ProductAnalytics.createProductTrendChart) {
+      ProductAnalytics.createProductTrendChart(productData, 'productTrendChart');
+    } else {
+      console.warn('ProductAnalytics.createProductTrendChart is not defined.');
+    }
   }, 100);
 }
 
@@ -601,20 +857,392 @@ function showProductDetails(encodedProduct) {
 function updateTotalSavings() {
   const savingsEl = document.getElementById('totalPotentialSavings');
   if (!savingsEl || !productAnalyticsData) return;
-  
+
   const totalSavings = productAnalyticsData.substitutions
     .reduce(function(sum, sub) { return sum + sub.annualSavings; }, 0);
-  
+
   savingsEl.textContent = '$' + totalSavings.toLocaleString();
 }
+
+// Setup product table filters
+function setupProductFilters() {
+  if (!productAnalyticsData || !productAnalyticsData.abcAnalysis) return;
+
+  const products = productAnalyticsData.abcAnalysis.products;
+
+  // Populate category filter
+  const categories = new Set();
+  const brands = new Set();
+
+  products.forEach(function(p) {
+    // Attempt to get category from invoice data if available
+    const firstInvoice = p.invoices && p.invoices[0];
+    if (firstInvoice && firstInvoice.category) {
+      categories.add(firstInvoice.category);
+    } else {
+      // Fallback or if no invoice data is linked directly
+      categories.add('Uncategorized');
+    }
+    if (p.brand) brands.add(p.brand);
+  });
+
+  const categoryFilter = document.getElementById('productCategoryFilter');
+  const brandFilter = document.getElementById('productBrandFilter');
+  const abcFilter = document.getElementById('productABCFilter');
+
+  if (categoryFilter) {
+    // Clear existing options except 'all'
+    categoryFilter.innerHTML = '<option value="all">All Categories</option>';
+    Array.from(categories).sort().forEach(function(cat) {
+      const option = document.createElement('option');
+      option.value = cat;
+      option.textContent = cat;
+      categoryFilter.appendChild(option);
+    });
+    categoryFilter.addEventListener('change', filterProductTable);
+  }
+
+  if (brandFilter) {
+    // Clear existing options except 'all'
+    brandFilter.innerHTML = '<option value="all">All Brands</option>';
+    Array.from(brands).sort().forEach(function(brand) {
+      const option = document.createElement('option');
+      option.value = brand;
+      option.textContent = brand;
+      brandFilter.appendChild(option);
+    });
+    brandFilter.addEventListener('change', filterProductTable);
+  }
+
+  if (abcFilter) {
+    // Ensure the filter has options if not already populated by HTML
+    if (abcFilter.options.length <= 1) { // If only the default 'All' option exists
+      const abcCategories = ['A', 'B', 'C'];
+      abcCategories.forEach(function(abc) {
+          const option = document.createElement('option');
+          option.value = abc;
+          option.textContent = abc + ' Category';
+          abcFilter.appendChild(option);
+      });
+    }
+    abcFilter.addEventListener('change', filterProductTable);
+  }
+}
+
+// Filter product table
+function filterProductTable() {
+  const categoryFilter = document.getElementById('productCategoryFilter')?.value || 'all';
+  const brandFilter = document.getElementById('productBrandFilter')?.value || 'all';
+  const abcFilter = document.getElementById('productABCFilter')?.value || 'all';
+
+  let filteredProducts = productAnalyticsData.abcAnalysis.products;
+
+  if (categoryFilter !== 'all') {
+    filteredProducts = filteredProducts.filter(function(p) {
+      const firstInvoice = p.invoices && p.invoices[0];
+      return firstInvoice && firstInvoice.category === categoryFilter;
+    });
+  }
+
+  if (brandFilter !== 'all') {
+    filteredProducts = filteredProducts.filter(function(p) {
+      return p.brand === brandFilter;
+    });
+  }
+
+  if (abcFilter !== 'all') {
+    filteredProducts = filteredProducts.filter(function(p) {
+      return p.abcCategory === abcFilter;
+    });
+  }
+
+  createTopProductsTable(filteredProducts.slice(0, 15));
+}
+
+// Reset product filters
+window.resetProductFilters = function() {
+  const categoryFilter = document.getElementById('productCategoryFilter');
+  const brandFilter = document.getElementById('productBrandFilter');
+  const abcFilter = document.getElementById('productABCFilter');
+
+  if (categoryFilter) categoryFilter.value = 'all';
+  if (brandFilter) brandFilter.value = 'all';
+  if (abcFilter) abcFilter.value = 'all';
+
+  createTopProductsTable(); // Re-render with default products
+};
+
+// Show product drill-down in modal (renamed to avoid conflict with showProductDetails)
+function showProductDrillDown(product) {
+  const modal = document.getElementById('productModal');
+  const modalTitle = document.getElementById('productModalTitle');
+  const modalBody = document.getElementById('productModalBody');
+
+  if (!modal || !modalTitle || !modalBody) return;
+
+  modalTitle.textContent = product.product;
+
+  // Ensure priceChanges is an array
+  const priceChanges = Array.isArray(product.priceChanges) ? product.priceChanges : [];
+  const lastPriceChange = priceChanges.length > 0 ? priceChanges[priceChanges.length - 1] : null;
+
+  // Ensure invoices is an array
+  const invoices = Array.isArray(product.invoices) ? product.invoices : [];
+
+  modalBody.innerHTML = '<div class="product-details">' +
+    '<div class="detail-grid">' +
+      '<div class="detail-card">' +
+        '<h4>Financial Summary</h4>' +
+        '<p><strong>Total Spend:</strong> $' + product.totalSpend.toLocaleString() + '</p>' +
+        '<p><strong>Total Quantity:</strong> ' + product.totalQty + '</p>' +
+        '<p><strong>Average Price:</strong> $' + product.avgPrice.toFixed(2) + '</p>' +
+        '<p><strong>ABC Category:</strong> <span class="badge badge-' + product.abcCategory.toLowerCase() + '">' + product.abcCategory + '</span></p>' +
+      '</div>' +
+      '<div class="detail-card">' +
+        '<h4>Product Info</h4>' +
+        '<p><strong>Brand:</strong> ' + (product.brand || 'Generic') + '</p>' +
+        '<p><strong>Pack Size:</strong> ' + (product.packSize || 'N/A') + '</p>' +
+        '<p><strong>Vendor:</strong> ' + (product.vendor || 'N/A') + '</p>' +
+        '<p><strong>Status:</strong> ' + product.status + '</p>' +
+      '</div>' +
+      '<div class="detail-card">' +
+        '<h4>Order History</h4>' +
+        '<p><strong>Total Orders:</strong> ' + product.orderCount + '</p>' +
+        '<p><strong>First Seen:</strong> ' + new Date(product.firstSeen).toLocaleDateString() + '</p>' +
+        '<p><strong>Last Seen:</strong> ' + new Date(product.lastSeen).toLocaleDateString() + '</p>' +
+        '<p><strong>Avg Days Between Orders:</strong> ' + Math.round(product.avgDaysBetweenOrders) + '</p>' +
+      '</div>' +
+      '<div class="detail-card">' +
+        '<h4>Price Analysis</h4>' +
+        '<p><strong>Price Volatility:</strong> ' + (product.priceVolatility * 100).toFixed(1) + '%</p>' +
+        '<p><strong>Price Changes:</strong> ' + priceChanges.length + '</p>' +
+        (lastPriceChange ? '<p><strong>Last Change:</strong> ' +
+          (lastPriceChange.changePercent > 0 ? '↑' : '↓') + ' ' +
+          Math.abs(lastPriceChange.changePercent).toFixed(1) + '% on ' +
+          new Date(lastPriceChange.date).toLocaleDateString() + '</p>' : '') +
+      '</div>' +
+    '</div>' +
+    '<h4>Recent Invoices</h4>' +
+    '<table class="drill-down-table">' +
+      '<thead><tr><th>Date</th><th>Qty</th><th>Unit Price</th><th>Ext Price</th></tr></thead>' +
+      '<tbody>' +
+        invoices.slice(0, 10).map(function(inv) {
+          return '<tr>' +
+            '<td>' + new Date(inv.date).toLocaleDateString() + '</td>' +
+            '<td>' + inv.qty + '</td>' +
+            '<td>$' + inv.price.toFixed(2) + '</td>' +
+            '<td>$' + inv.extPrice.toFixed(2) + '</td>' +
+          '</tr>';
+        }).join('') +
+      '</tbody>' +
+    '</table>' +
+  '</div>';
+
+  modal.style.display = 'block';
+}
+
 
 // Add CSS for new elements
 (function() {
   const style = document.createElement('style');
-  style.textContent = '.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin-bottom:2rem}.detail-card{background:#f9fafb;padding:1rem;border-radius:8px}.detail-card h4{margin-bottom:.5rem;color:#374151}.detail-card p{margin-bottom:.25rem}.badge{padding:.25rem .5rem;border-radius:4px;font-size:.75rem;font-weight:600}.badge-a{background:#fee2e2;color:#991b1b}.badge-b{background:#fef3c7;color:#92400e}.badge-c{background:#dbeafe;color:#1e40af}.btn-small{padding:.25rem .75rem;font-size:.875rem;background:#3b82f6;color:white;border:none;border-radius:4px;cursor:pointer}.btn-small:hover{background:#2563eb}.search-results{position:absolute;background:white;border:1px solid #e5e7eb;border-radius:4px;max-height:300px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:100;width:100%}.search-result{padding:.5rem 1rem;cursor:pointer;border-bottom:1px solid #f3f4f6}.search-result:hover{background:#f3f4f6}.search-no-results{padding:1rem;text-align:center;color:#6b7280}.warning{color:#f59e0b}';
+  style.textContent = `
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .detail-card {
+      background: #f9fafb;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .detail-card h4 {
+      margin-bottom: 0.5rem;
+      color: #374151;
+      font-size: 1.1rem;
+    }
+    .detail-card p {
+      margin-bottom: 0.25rem;
+      font-size: 0.95rem;
+      color: #4b5563;
+    }
+    .detail-card p strong {
+      color: #1f2937;
+    }
+    .badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-block;
+    }
+    .badge-a { background: #fee2e2; color: #991b1b; }
+    .badge-b { background: #fef3c7; color: #92400e; }
+    .badge-c { background: #dbeafe; color: #1e40af; }
+
+    .btn-small {
+      padding: 0.25rem 0.75rem;
+      font-size: 0.875rem;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    .btn-small:hover { background: #2563eb; }
+
+    .search-results {
+      position: absolute;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      z-index: 100;
+      width: 100%; /* Consider max-width if needed */
+    }
+    .search-result {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border-bottom: 1px solid #f3f4f6;
+      transition: background-color 0.2s ease;
+    }
+    .search-result:hover { background: #f3f4f6; }
+    .search-no-results {
+      padding: 1rem;
+      text-align: center;
+      color: #6b7280;
+    }
+    .warning { color: #f59e0b; }
+    .positive { color: #10b981; } /* Green */
+    .negative { color: #ef4444; } /* Red */
+
+    /* Data Quality Indicators Styles */
+    .data-quality-panel {
+      background: #f9fafb;
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .data-quality-panel h4 {
+      margin-bottom: 1rem;
+      color: #1f2937;
+      font-size: 1.25rem;
+      display: flex;
+      align-items: center;
+    }
+    .data-quality-panel h4 svg { margin-right: 0.5rem; }
+    .quality-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .quality-card {
+      background: white;
+      padding: 1rem;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      text-align: center;
+    }
+    .quality-label {
+      font-size: 0.9rem;
+      color: #6b7280;
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .quality-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      line-height: 1;
+    }
+    .quality-value.good { color: #10b981; } /* Green */
+    .quality-value.warning { color: #f59e0b; } /* Orange */
+    .quality-value.poor { color: #ef4444; } /* Red */
+    .quality-detail {
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+
+    /* Pack Size Chart Styles */
+    #packSizeChart { /* Ensure canvas has a defined size or container does */ }
+
+    /* Vendor Diversification Chart Styles */
+    #vendorDiversificationChart { /* Ensure canvas has a defined size or container does */ }
+
+    /* Product Table Filters */
+    .filter-container {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .filter-container label {
+      font-weight: 500;
+      color: #374151;
+      margin-right: 0.5rem;
+    }
+    .filter-container select {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5eb;
+      border-radius: 4px;
+      background-color: white;
+      font-size: 0.9rem;
+      min-width: 150px;
+    }
+    .filter-container button {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      background: #e5e7eb;
+      color: #374151;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    .filter-container button:hover { background: #d1d5eb; }
+
+    /* Drill-down Table Styles */
+    .drill-down-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    .drill-down-table th, .drill-down-table td {
+      padding: 0.75rem 0.5rem;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 0.9rem;
+    }
+    .drill-down-table th {
+      background-color: #f9fafb;
+      font-weight: 600;
+      color: #374151;
+    }
+    .drill-down-table td {
+      color: #4b5563;
+    }
+    .drill-down-table td.number, .drill-down-table th.number { text-align: right; }
+
+    /* Ensure charts have proper dimensions */
+    .chart-container {
+      position: relative;
+      height: 300px; /* Default height, adjust as needed */
+      width: 100%;
+    }
+    canvas { display: block; } /* Prevent extra space below canvas */
+  `;
   document.head.appendChild(style);
 })();
 
 // Export for use in main application
 window.initializeProductAnalytics = initializeProductAnalytics;
 window.showProductDetails = showProductDetails;
+window.showProductDrillDown = showProductDrillDown; // Export the drill-down function as well

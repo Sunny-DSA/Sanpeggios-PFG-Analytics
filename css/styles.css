@@ -886,3 +886,62 @@ header .subtitle {
   height: 18px;
   cursor: pointer;
 }
+
+/* Data Quality Indicators */
+.data-quality-panel {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.data-quality-panel h4 {
+  margin-bottom: 1rem;
+  color: #111827;
+  font-weight: 600;
+}
+
+.quality-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.quality-card {
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+.quality-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #6b7280;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.quality-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.quality-value.good {
+  color: #059669;
+}
+
+.quality-value.warning {
+  color: #f59e0b;
+}
+
+.quality-value.poor {
+  color: #dc2626;
+}
+
+.quality-detail {
+  font-size: 0.75rem;
+  color: #6b7280;
+}

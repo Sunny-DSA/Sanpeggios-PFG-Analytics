@@ -189,6 +189,9 @@
         <section class="section">
             <h2>📦 Product Analytics Dashboard</h2>
             
+            <!-- Data Quality Indicators -->
+            <div id="dataQualityIndicators" class="mb-3"></div>
+            
             <!-- Product Search -->
             <div class="control-group mb-3">
                 <label style="flex: 1; position: relative;">
@@ -216,9 +219,56 @@
                 </div>
             </div>
             
-            <!-- Top Products Table -->
+            <!-- Pack Size Optimization and Vendor Diversification -->
+            <div class="grid grid-2 mb-3">
+                <div>
+                    <h3>📦 Pack Size Optimization</h3>
+                    <div class="chart-container">
+                        <canvas id="packSizeChart"></canvas>
+                    </div>
+                    <p class="text-small text-muted">
+                        Cost per unit across different pack sizes. Lower bars indicate better value.
+                    </p>
+                </div>
+                
+                <div>
+                    <h3>🏭 Vendor Diversification by Category</h3>
+                    <div class="chart-container">
+                        <canvas id="vendorDiversificationChart"></canvas>
+                    </div>
+                    <p class="text-small text-muted">
+                        Higher scores indicate better vendor diversification (less risk).
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Top Products Table with Filters -->
             <div class="mb-3">
                 <h3>🏆 Top Products by Spend</h3>
+                <div class="control-group mb-2">
+                    <label>
+                        Filter by Category:
+                        <select id="productCategoryFilter">
+                            <option value="all">All Categories</option>
+                        </select>
+                    </label>
+                    <label>
+                        Filter by Brand:
+                        <select id="productBrandFilter">
+                            <option value="all">All Brands</option>
+                        </select>
+                    </label>
+                    <label>
+                        Filter by ABC:
+                        <select id="productABCFilter">
+                            <option value="all">All Classifications</option>
+                            <option value="A">A Items (Top 80%)</option>
+                            <option value="B">B Items (80-95%)</option>
+                            <option value="C">C Items (95-100%)</option>
+                        </select>
+                    </label>
+                    <button class="btn btn-secondary btn-small" onclick="resetProductFilters()">Reset Filters</button>
+                </div>
                 <div id="topProductsTable"></div>
             </div>
         </section>
