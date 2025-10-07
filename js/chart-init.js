@@ -197,20 +197,22 @@ function createPriceTrendChart() {
     return;
   }
 
-  // Aggregate data by month and category
-  const monthlyData = {};
+  // Use weekly aggregation for better granularity with limited data
+  const weeklyData = {};
   analytics.data.forEach(item => {
-    const month = item.invoiceDate.toISOString().slice(0, 7);
-    if (!monthlyData[month]) monthlyData[month] = {};
-    if (!monthlyData[month][item.category]) {
-      monthlyData[month][item.category] = {
+    const weekKey = getWeekKey(item.invoiceDate);
+    if (!weeklyData[weekKey]) weeklyData[weekKey] = {};
+    if (!weeklyData[weekKey][item.category]) {
+      weeklyData[weekKey][item.category] = {
         prices: [],
-        spikes: []
+        spikes: [],
+        dates: []
       };
     }
-    monthlyData[month][item.category].prices.push(item.unitPrice);
+    weeklyData[weekKey][item.category].prices.push(item.unitPrice);
+    weeklyData[weekKey][item.category].dates.push(item.invoiceDate);
     if (item.isSpike) {
-      monthlyData[month][item.category].spikes.push({
+      weeklyData[weekKey][item.category].spikes.push({
         price: item.unitPrice,
         direction: item.spikeDirection
       });
@@ -218,27 +220,45 @@ function createPriceTrendChart() {
   });
 
   // Prepare chart data
-  const labels = Object.keys(monthlyData).sort();
-  const categories = [...new Set(analytics.data.map(d => d.category))].slice(0, 8); // Top 8
+  const labels = Object.keys(weeklyData).sort();
+  
+  // Get top categories by spend
+  const categorySpend = {};
+  analytics.data.forEach(item => {
+    if (!categorySpend[item.category]) categorySpend[item.category] = 0;
+    categorySpend[item.category] += item.extPrice;
+  });
+  const categories = Object.entries(categorySpend)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([cat]) => cat);
 
   const datasets = categories.map((cat, idx) => {
-    const data = labels.map(month => {
-      const catData = monthlyData[month] && monthlyData[month][cat];
+    const data = labels.map(week => {
+      const catData = weeklyData[week] && weeklyData[week][cat];
       if (!catData || catData.prices.length === 0) return null;
       return catData.prices.reduce((a, b) => a + b, 0) / catData.prices.length;
     });
 
+    // Calculate 4-week moving average for trend line
+    const movingAvg = data.map((val, i) => {
+      if (val === null) return null;
+      const window = data.slice(Math.max(0, i - 3), i + 1).filter(v => v !== null);
+      if (window.length === 0) return null;
+      return window.reduce((a, b) => a + b, 0) / window.length;
+    });
+
     // Mark spike points
-    const pointBackgroundColors = labels.map(month => {
-      const catData = monthlyData[month] && monthlyData[month][cat];
+    const pointBackgroundColors = labels.map(week => {
+      const catData = weeklyData[week] && weeklyData[week][cat];
       if (!catData || catData.spikes.length === 0) return colorSchemes.primary[idx % colorSchemes.primary.length];
       const spike = catData.spikes[0];
       return colorSchemes.spike[spike.direction] || colorSchemes.spike.normal;
     });
 
-    const pointRadii = labels.map(month => {
-      const catData = monthlyData[month] && monthlyData[month][cat];
-      return catData && catData.spikes.length > 0 ? 8 : 3;
+    const pointRadii = labels.map(week => {
+      const catData = weeklyData[week] && weeklyData[week][cat];
+      return catData && catData.spikes.length > 0 ? 8 : 4;
     });
 
     return {
@@ -251,9 +271,42 @@ function createPriceTrendChart() {
       pointBackgroundColor: pointBackgroundColors,
       pointRadius: pointRadii,
       pointHoverRadius: 10,
-      tension: 0.1
+      tension: 0.3,
+      spanGaps: true
     };
   });
+
+  // Add moving average datasets if we have enough data
+  if (labels.length > 4) {
+    categories.forEach((cat, idx) => {
+      const data = labels.map(week => {
+        const catData = weeklyData[week] && weeklyData[week][cat];
+        if (!catData || catData.prices.length === 0) return null;
+        return catData.prices.reduce((a, b) => a + b, 0) / catData.prices.length;
+      });
+
+      const movingAvg = data.map((val, i) => {
+        if (val === null) return null;
+        const window = data.slice(Math.max(0, i - 3), i + 1).filter(v => v !== null);
+        if (window.length === 0) return null;
+        return window.reduce((a, b) => a + b, 0) / window.length;
+      });
+
+      datasets.push({
+        label: `${cat} (4-week avg)`,
+        data: movingAvg,
+        borderColor: colorSchemes.primary[idx % colorSchemes.primary.length],
+        backgroundColor: 'transparent',
+        fill: false,
+        borderWidth: 1,
+        borderDash: [5, 5],
+        pointRadius: 0,
+        pointHoverRadius: 6,
+        tension: 0.4,
+        spanGaps: true
+      });
+    });
+  }
 
   charts.priceTrend = new Chart(ctx, {
     type: 'line',
@@ -264,20 +317,34 @@ function createPriceTrendChart() {
       plugins: {
         title: {
           display: true,
-          text: 'Average Unit Price Trends with Spike Detection',
+          text: 'Weekly Price Trends with Spike Detection',
           font: { size: 16 }
         },
         legend: {
           display: true,
-          position: 'bottom'
+          position: 'bottom',
+          labels: {
+            filter: function(item) {
+              // Show main series and hide moving averages if too cluttered
+              return !item.text.includes('(4-week avg)') || datasets.length <= 10;
+            }
+          }
         },
         tooltip: {
+          mode: 'index',
+          intersect: false,
           callbacks: {
+            title: (context) => {
+              const week = labels[context[0].dataIndex];
+              // Convert week key to readable date
+              const [year, weekNum] = week.split('-W');
+              return `Week ${weekNum}, ${year}`;
+            },
             afterLabel: (context) => {
-              const month = labels[context.dataIndex];
-              const cat = context.dataset.label;
-              const monthData = monthlyData[month];
-              const spikes = monthData && monthData[cat] ? monthData[cat].spikes : [];
+              const week = labels[context.dataIndex];
+              const cat = context.dataset.label.replace(' (4-week avg)', '');
+              const weekData = weeklyData[week];
+              const spikes = weekData && weekData[cat] ? weekData[cat].spikes : [];
               if (spikes.length > 0) {
                 return `⚠️ Price spike detected (${spikes[0].direction})`;
               }
@@ -288,11 +355,26 @@ function createPriceTrendChart() {
       },
       scales: {
         x: {
-          title: { display: true, text: 'Month' }
+          title: { display: true, text: 'Week' },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45,
+            callback: function(value, index) {
+              // Show every nth label to avoid clutter
+              const label = labels[index];
+              if (labels.length > 12) {
+                return index % 2 === 0 ? label : '';
+              }
+              return label;
+            }
+          }
         },
         y: {
           title: { display: true, text: 'Average Unit Price ($)' },
-          beginAtZero: false
+          beginAtZero: false,
+          ticks: {
+            callback: value => '$' + value.toFixed(2)
+          }
         }
       },
       interaction: {
@@ -301,6 +383,81 @@ function createPriceTrendChart() {
       }
     }
   });
+
+  // Generate trend summary
+  generatePriceTrendSummary(categories, weeklyData, labels);
+}
+
+// Generate price trend summary table
+function generatePriceTrendSummary(categories, weeklyData, labels) {
+  const summaryContainer = document.getElementById('priceTrendSummary');
+  if (!summaryContainer) return;
+
+  const trendStats = categories.map(cat => {
+    const prices = [];
+    labels.forEach(week => {
+      const catData = weeklyData[week] && weeklyData[week][cat];
+      if (catData && catData.prices.length > 0) {
+        const avgPrice = catData.prices.reduce((a, b) => a + b, 0) / catData.prices.length;
+        prices.push(avgPrice);
+      }
+    });
+
+    if (prices.length < 2) {
+      return { category: cat, trend: 'Insufficient data', change: 0, current: 0, weeks: prices.length };
+    }
+
+    const firstPrice = prices[0];
+    const lastPrice = prices[prices.length - 1];
+    const change = lastPrice - firstPrice;
+    const changePercent = firstPrice > 0 ? (change / firstPrice) * 100 : 0;
+
+    return {
+      category: cat,
+      trend: changePercent > 5 ? '📈 Increasing' : changePercent < -5 ? '📉 Decreasing' : '➡️ Stable',
+      change: changePercent,
+      current: lastPrice,
+      weeks: prices.length,
+      volatility: calculateVolatility(prices) * 100
+    };
+  });
+
+  summaryContainer.innerHTML = `
+    <table class="drill-down-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Trend</th>
+          <th>Current Avg Price</th>
+          <th>Change</th>
+          <th>Volatility</th>
+          <th>Data Points</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${trendStats.map(stat => `
+          <tr>
+            <td><strong>${stat.category}</strong></td>
+            <td>${stat.trend}</td>
+            <td>$${stat.current.toFixed(2)}</td>
+            <td class="${stat.change > 0 ? 'negative' : stat.change < 0 ? 'positive' : ''}">
+              ${stat.change > 0 ? '↑' : stat.change < 0 ? '↓' : ''} 
+              ${Math.abs(stat.change).toFixed(1)}%
+            </td>
+            <td>${stat.volatility.toFixed(1)}%</td>
+            <td>${stat.weeks} weeks</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// Helper function to get week key in format YYYY-Www
+function getWeekKey(date) {
+  const year = date.getFullYear();
+  const weekNum = getWeekNumber(date);
+  return `${year}-W${String(weekNum).padStart(2, '0')}`;
 }
 
 // Sprint 2: Volatility chart
