@@ -333,10 +333,49 @@ function analyzePackSizes(data) {
   return packSizeMetrics;
 }
 
-// Product Substitution Analysis
+// Product Substitution Analysis with Smart Categorization
 function findSubstitutionOpportunities(productMetrics) {
   const substitutions = [];
   const products = Object.entries(productMetrics);
+  
+  // Define non-substitutable item patterns
+  const nonSubstitutablePatterns = [
+    /pizza box/i,
+    /box.*pizza/i,
+    /packaging/i,
+    /branded.*box/i,
+    /custom.*box/i,
+    /logo/i,
+    /sanpeggio/i,
+    /delivery.*bag/i,
+    /branded.*bag/i
+  ];
+  
+  // Define critical business items that need careful consideration
+  const criticalPatterns = [
+    /dough/i,
+    /sauce/i,
+    /cheese/i,
+    /pepperoni/i,
+    /mozzarella/i
+  ];
+  
+  // Helper function to check if item is non-substitutable
+  function isNonSubstitutable(description) {
+    return nonSubstitutablePatterns.some(pattern => pattern.test(description));
+  }
+  
+  // Helper function to check if item is critical
+  function isCriticalItem(description) {
+    return criticalPatterns.some(pattern => pattern.test(description));
+  }
+  
+  // Calculate usage velocity (orders per month)
+  function calculateUsageVelocity(metric) {
+    const daysDiff = Math.max(1, (metric.lastSeen - metric.firstSeen) / (1000 * 60 * 60 * 24));
+    const monthsDiff = daysDiff / 30;
+    return metric.orderCount / monthsDiff;
+  }
   
   // Group products by category and similar descriptions
   const categoryGroups = {};
@@ -361,20 +400,46 @@ function findSubstitutionOpportunities(productMetrics) {
       for (let i = 1; i < group.length; i++) {
         const cheaper = group[0];
         const current = group[i];
+        
+        // Skip if either product is non-substitutable
+        if (isNonSubstitutable(current.description) || isNonSubstitutable(cheaper.description)) {
+          continue;
+        }
+        
         const savings = current.avgPrice - cheaper.avgPrice;
         const savingsPercent = current.avgPrice > 0 ? (savings / current.avgPrice) * 100 : 0;
         
-        if (savingsPercent > 5) { // Only suggest if >5% savings
+        // Calculate usage metrics
+        const currentVelocity = calculateUsageVelocity(current);
+        const avgMonthlyQty = current.totalQty / Math.max(1, (current.lastSeen - current.firstSeen) / (1000 * 60 * 60 * 24) / 30);
+        
+        // Only suggest if meaningful savings (>5% or >$50 annual)
+        const annualSavings = savings * avgMonthlyQty * 12;
+        
+        if (savingsPercent > 5 || annualSavings > 50) {
+          const isCritical = isCriticalItem(current.description);
+          
           substitutions.push({
             currentProduct: current.description,
             currentBrand: current.brand,
             currentPrice: current.avgPrice,
+            currentPackSize: current.packSize,
             suggestedProduct: cheaper.description,
             suggestedBrand: cheaper.brand,
             suggestedPrice: cheaper.avgPrice,
+            suggestedPackSize: cheaper.packSize,
             potentialSavings: savings,
             savingsPercent,
-            annualSavings: savings * (current.totalQty / 12) * 12 // Projected annual
+            monthlyUsage: avgMonthlyQty,
+            orderFrequency: currentVelocity,
+            annualSavings: annualSavings,
+            isCritical: isCritical,
+            substitutionType: isCritical ? 'Review Required' : 'Safe to Substitute',
+            category: current.invoices[0] ? current.invoices[0].category : 'Unknown',
+            riskLevel: isCritical ? 'Medium' : 'Low',
+            recommendation: isCritical ? 
+              'Test before full substitution - critical ingredient' : 
+              'Safe to substitute - cost savings opportunity'
           });
         }
       }

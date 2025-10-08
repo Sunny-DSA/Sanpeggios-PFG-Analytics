@@ -701,49 +701,166 @@ function createTopProductsTable(productsToDisplay = null) {
   container.innerHTML = html;
 }
 
-// Substitution Opportunities Table
+// Substitution Opportunities Table with Enhanced Metrics
 function createSubstitutionTable() {
   const container = document.getElementById('substitutionTable');
   if (!container || !productAnalyticsData) return;
 
-  const substitutions = productAnalyticsData.substitutions.slice(0, 10);
+  const substitutions = productAnalyticsData.substitutions.slice(0, 15);
 
   if (substitutions.length === 0) {
-    container.innerHTML = '<p class="text-muted">No significant substitution opportunities found.</p>';
+    container.innerHTML = '<div class="alert alert-info">' +
+      '<strong>ℹ️ No Substitution Opportunities Found</strong><br>' +
+      'All current products are optimally priced or are non-substitutable items (like branded packaging).' +
+      '</div>';
     return;
   }
 
-  let html = '<table class="data-table">' +
+  let html = '<div class="substitution-legend mb-2">' +
+    '<span class="legend-item"><span class="badge-risk low">Low Risk</span> Safe to substitute</span>' +
+    '<span class="legend-item"><span class="badge-risk medium">Medium Risk</span> Test before full switch</span>' +
+    '<span class="legend-item"><span class="badge-risk critical">Critical</span> Non-substitutable</span>' +
+    '</div>' +
+    '<table class="data-table">' +
     '<thead>' +
       '<tr>' +
         '<th>Current Product</th>' +
-        '<th>Suggested Alternative</th>' +
+        '<th>Pack Size</th>' +
+        '<th>Alternative</th>' +
+        '<th>Pack Size</th>' +
+        '<th class="number">Monthly Usage</th>' +
         '<th class="number">Current Price</th>' +
         '<th class="number">Alt. Price</th>' +
-        '<th class="number">Savings</th>' +
+        '<th class="number">Savings %</th>' +
         '<th class="number">Annual Impact</th>' +
+        '<th>Risk</th>' +
+        '<th>Recommendation</th>' +
       '</tr>' +
     '</thead>' +
     '<tbody>';
 
   substitutions.forEach(function(sub) {
-    html += '<tr>' +
+    const riskClass = sub.riskLevel.toLowerCase();
+    const riskBadge = '<span class="badge-risk ' + riskClass + '">' + sub.riskLevel + '</span>';
+    
+    html += '<tr class="substitution-row ' + (sub.isCritical ? 'critical-item' : '') + '">' +
       '<td>' +
-        '<div>' + sub.currentProduct.substring(0, 35) + '</div>' +
-        '<div class="text-small text-muted">' + sub.currentBrand + '</div>' +
+        '<div class="product-name">' + sub.currentProduct.substring(0, 40) + '</div>' +
+        '<div class="text-small text-muted">' + (sub.currentBrand || 'Generic') + '</div>' +
       '</td>' +
+      '<td><span class="pack-size">' + (sub.currentPackSize || 'N/A') + '</span></td>' +
       '<td>' +
-        '<div>' + sub.suggestedProduct.substring(0, 35) + '</div>' +
-        '<div class="text-small text-muted">' + sub.suggestedBrand + '</div>' +
+        '<div class="product-name">' + sub.suggestedProduct.substring(0, 40) + '</div>' +
+        '<div class="text-small text-muted">' + (sub.suggestedBrand || 'Generic') + '</div>' +
       '</td>' +
+      '<td><span class="pack-size">' + (sub.suggestedPackSize || 'N/A') + '</span></td>' +
+      '<td class="number">' + Math.round(sub.monthlyUsage) + ' units</td>' +
       '<td class="number">$' + sub.currentPrice.toFixed(2) + '</td>' +
       '<td class="number">$' + sub.suggestedPrice.toFixed(2) + '</td>' +
-      '<td class="number positive">' + sub.savingsPercent.toFixed(1) + '%</td>' +
-      '<td class="number positive">$' + sub.annualSavings.toLocaleString() + '</td>' +
+      '<td class="number positive"><strong>' + sub.savingsPercent.toFixed(1) + '%</strong></td>' +
+      '<td class="number positive"><strong>$' + Math.round(sub.annualSavings).toLocaleString() + '</strong></td>' +
+      '<td>' + riskBadge + '</td>' +
+      '<td class="recommendation-text">' + sub.recommendation + '</td>' +
     '</tr>';
   });
 
   html += '</tbody></table>';
+  
+  // Add summary statistics
+  const totalAnnualSavings = substitutions.reduce(function(sum, sub) { return sum + sub.annualSavings; }, 0);
+  const safeSubstitutions = substitutions.filter(function(sub) { return !sub.isCritical; }).length;
+  const criticalSubstitutions = substitutions.filter(function(sub) { return sub.isCritical; }).length;
+  
+  html += '<div class="substitution-summary mt-3">' +
+    '<div class="summary-card">' +
+      '<div class="summary-label">Total Annual Savings Potential</div>' +
+      '<div class="summary-value positive">$' + Math.round(totalAnnualSavings).toLocaleString() + '</div>' +
+    '</div>' +
+    '<div class="summary-card">' +
+      '<div class="summary-label">Safe Substitutions</div>' +
+      '<div class="summary-value">' + safeSubstitutions + ' opportunities</div>' +
+    '</div>' +
+    '<div class="summary-card">' +
+
+    /* Substitution Table Styles */
+    .substitution-legend {
+      display: flex;
+      gap: 1.5rem;
+      padding: 0.75rem;
+      background: #f9fafb;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .badge-risk {
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge-risk.low { background: #d1fae5; color: #065f46; }
+    .badge-risk.medium { background: #fed7aa; color: #92400e; }
+    .badge-risk.critical { background: #fee2e2; color: #991b1b; }
+    
+    .substitution-row.critical-item {
+      background: #fffbeb;
+    }
+    .product-name {
+      font-weight: 500;
+      color: #1f2937;
+    }
+    .pack-size {
+      font-size: 0.85rem;
+      color: #6b7280;
+      background: #f3f4f6;
+      padding: 0.125rem 0.5rem;
+      border-radius: 3px;
+    }
+    .recommendation-text {
+      font-size: 0.85rem;
+      color: #4b5563;
+      max-width: 200px;
+    }
+    
+    .substitution-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    .summary-card {
+      background: #f9fafb;
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      text-align: center;
+    }
+    .summary-label {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .summary-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1f2937;
+    }
+    .summary-value.positive { color: #10b981; }
+    .summary-value.warning { color: #f59e0b; }
+
+      '<div class="summary-label">Requires Testing</div>' +
+      '<div class="summary-value warning">' + criticalSubstitutions + ' items</div>' +
+    '</div>' +
+  '</div>';
+  
   container.innerHTML = html;
 }
 
@@ -888,15 +1005,25 @@ function showProductDetails(encodedProduct) {
   }, 100);
 }
 
-// Update total potential savings
+// Update total potential savings with detailed breakdown
 function updateTotalSavings() {
   const savingsEl = document.getElementById('totalPotentialSavings');
   if (!savingsEl || !productAnalyticsData) return;
 
-  const totalSavings = productAnalyticsData.substitutions
+  const substitutions = productAnalyticsData.substitutions;
+  const totalSavings = substitutions.reduce(function(sum, sub) { return sum + sub.annualSavings; }, 0);
+  const safeSavings = substitutions
+    .filter(function(sub) { return !sub.isCritical; })
+    .reduce(function(sum, sub) { return sum + sub.annualSavings; }, 0);
+  const criticalSavings = substitutions
+    .filter(function(sub) { return sub.isCritical; })
     .reduce(function(sum, sub) { return sum + sub.annualSavings; }, 0);
 
-  savingsEl.textContent = '$' + totalSavings.toLocaleString();
+  savingsEl.innerHTML = '<strong>$' + Math.round(totalSavings).toLocaleString() + '</strong>' +
+    '<div class="text-small" style="margin-top: 0.5rem;">' +
+      '<span class="text-muted">Safe substitutions: $' + Math.round(safeSavings).toLocaleString() + '</span>' +
+      (criticalSavings > 0 ? ' | <span class="text-muted">Requires testing: $' + Math.round(criticalSavings).toLocaleString() + '</span>' : '') +
+    '</div>';
 }
 
 // Setup product table filters
