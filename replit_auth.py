@@ -152,8 +152,28 @@ def logged_in(blueprint, token):
         if not token or 'id_token' not in token:
             return redirect(url_for('replit_auth.error'))
         
-        user_claims = jwt.decode(token['id_token'],
-                                 options={"verify_signature": False})
+        issuer_url = os.environ.get('ISSUER_URL', "https://replit.com/oidc")
+        repl_id = os.environ.get('REPL_ID')
+        
+        # Get the signing key from JWKS and verify the ID token
+        jwks_client = jwt.PyJWKClient(issuer_url + "/.well-known/jwks.json")
+        signing_key = jwks_client.get_signing_key_from_jwt(token['id_token'])
+        
+        # Verify and decode the ID token with proper validation
+        user_claims = jwt.decode(
+            token['id_token'],
+            key=signing_key.key,
+            algorithms=["RS256"],
+            audience=repl_id,
+            issuer=issuer_url,
+            options={
+                "verify_signature": True,
+                "verify_exp": True,
+                "verify_aud": True,
+                "verify_iss": True
+            }
+        )
+        
         user = save_user(user_claims)
         login_user(user)
         blueprint.token = token
