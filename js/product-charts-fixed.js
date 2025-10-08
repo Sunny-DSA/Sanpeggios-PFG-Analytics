@@ -182,6 +182,85 @@ function createABCChart() {
   });
 }
 
+/**
+ * Product Charts Module - Fixed
+ * Handles all product-level visualizations
+ */
+
+// Global product analytics data
+let productAnalyticsData = null;
+
+// Color schemes for product charts
+const productColorSchemes = {
+  primary: [
+    'rgba(220, 38, 38, 0.8)',
+    'rgba(37, 99, 235, 0.8)',
+    'rgba(16, 185, 129, 0.8)',
+    'rgba(139, 92, 246, 0.8)',
+    'rgba(249, 115, 22, 0.8)',
+    'rgba(236, 72, 153, 0.8)',
+    'rgba(14, 165, 233, 0.8)',
+    'rgba(168, 85, 247, 0.8)'
+  ]
+};
+
+// Initialize product analytics
+async function initializeProductAnalytics() {
+  console.log('Product analytics initialization called');
+  
+  if (!window.analytics || !window.analytics.data || window.analytics.data.length === 0) {
+    console.warn('No analytics data available for product analytics');
+    return;
+  }
+
+  console.log('Initializing product analytics with', window.analytics.data.length, 'records');
+
+  // Use ProductAnalytics module if available
+  if (typeof ProductAnalytics !== 'undefined') {
+    const productMetrics = ProductAnalytics.analyzeProductPerformance(window.analytics.data);
+    const abcAnalysis = ProductAnalytics.performABCAnalysis(productMetrics);
+    const brandAnalysis = ProductAnalytics.analyzeBrands(window.analytics.data);
+    const packSizeAnalysis = ProductAnalytics.analyzePackSizes(window.analytics.data);
+    const substitutions = ProductAnalytics.findSubstitutionOpportunities(productMetrics);
+    const seasonality = ProductAnalytics.detectSeasonalPatterns(window.analytics.data);
+    const lifecycle = ProductAnalytics.analyzeProductLifecycle(productMetrics);
+
+    productAnalyticsData = {
+      productMetrics: productMetrics,
+      abcAnalysis: abcAnalysis,
+      brandAnalysis: brandAnalysis,
+      packSizeAnalysis: packSizeAnalysis,
+      substitutions: substitutions,
+      seasonality: seasonality,
+      lifecycle: lifecycle,
+      rawData: window.analytics.data
+    };
+
+    // Create all product charts
+    createABCChart();
+    createBrandPerformanceChart();
+    createProductLifecycleChart();
+    createTopProductsTable();
+    createSubstitutionTable();
+    createBrandComparisonChart();
+    createBrandMarketShareChart();
+    createBrandSummaryTable();
+    createDataQualityIndicators();
+    createPackSizeOptimizationChart();
+    createVendorDiversificationChart();
+    setupProductFilters();
+    updateProductSearch();
+    updateTotalSavings();
+
+    console.log('Product analytics initialized successfully');
+  } else {
+    console.error('ProductAnalytics module not found');
+  }
+}
+
+// Make function globally available
+window.initializeProductAnalytics = initializeProductAnalytics;
+
 // Brand Performance Chart with color-coding and interactivity
 function createBrandPerformanceChart() {
   const ctx = document.getElementById('brandChart');

@@ -136,6 +136,7 @@ async function waitForDependencies() {
 async function refreshAnalytics() {
   // Get current store data
   const storeData = StoreDataManager.getCurrentStoreData();
+  const storeId = StoreDataManager.currentStore || 'all'; // Get current store ID
 
   if (!storeData || storeData.data.length === 0) {
     console.warn('No data available for current store');
@@ -144,26 +145,74 @@ async function refreshAnalytics() {
     return;
   }
 
-  // Get the current store ID, defaulting to 'all' if undefined
-  const currentStoreId = StoreDataManager.currentStore || 'all';
-  console.log(`Refreshing analytics with ${storeData.data.length} records for store: ${currentStoreId}`);
+  console.log(`Refreshing analytics with ${storeData.data.length} records for store: ${storeId}`);
 
+  // Run analytics for this store's data
   const options = {
     volatilityWindow: currentFilters.volatilityWindow,
-    filters: currentFilters
+    filters: currentFilters,
   };
 
-  // Run analytics on store data
-  analytics = await runFullAnalytics(storeData.data, options);
+  // Convert raw data to parsed format
+  const parsedData = storeData.data.map(function (row) {
+    const qty = parseFloat(row["Qty Shipped"]) || 0;
+    const ext = parseFloat(row["Ext. Price"]) || 0;
+    let unit = parseFloat(row["Unit Price"]);
 
-  // Make analytics globally accessible for other modules
+    if (!unit || unit <= 0) {
+      unit = qty > 0 ? ext / qty : 0;
+    }
+
+    return {
+      invoiceDate: new Date(row["Invoice Date"]),
+      invoiceNumber: row["Invoice Number"],
+      category: (
+        row["Product Class Description"] ||
+        row["Category/Class"] ||
+        ""
+      ).trim(),
+      productDescription: row["Product Description"],
+      brand: row["Brand"],
+      vendor: row["Manufacturer Name"],
+      unitPrice: unit,
+      extPrice: ext,
+      qty: qty,
+      qtyOrdered: parseFloat(row["Qty Ordered"]) || 0,
+      weight: row["Weight"],
+      packSize: row["Pack Size"],
+      customerName: row["Customer Name"],
+      raw: row,
+    };
+  });
+
+  // Run full analytics
+  analytics = await runFullAnalytics(parsedData, options);
   window.analytics = analytics;
 
-  console.log(`Analytics complete - Total spend: $${analytics.summary.totalSpend.toLocaleString()}, Records: ${analytics.summary.totalRecords}`);
+  // Store analytics for this store
+  StoreDataManager.stores[storeId].analytics = analytics;
 
-  // Update UI elements
+  // Calculate store KPIs
+  StoreDataManager.calculateStoreKPIs(storeId);
+
+  // Update all store rankings
+  StoreDataManager.updateStoreRankings();
+
+  // Update UI
   updateSummaryStats();
   updateFilterOptions();
+  await initializeAllCharts();
+
+  // Initialize product analytics with proper checks
+  if (typeof initializeProductAnalytics === "function") {
+    console.log('Running product analytics initialization...');
+    await initializeProductAnalytics();
+  } else if (typeof ProductAnalytics !== 'undefined' && typeof ProductAnalytics.init === 'function') {
+    console.log('Running product analytics via ProductAnalytics.init...');
+    await ProductAnalytics.init();
+  }
+
+  checkAndDisplayAlerts();
 }
 
 // Initialize all chart visualizations
@@ -232,7 +281,7 @@ function createPriceTrendChart() {
 
   // Prepare chart data
   const labels = Object.keys(weeklyData).sort();
-  
+
   // Get top categories by spend
   const categorySpend = {};
   analytics.data.forEach(item => {
@@ -807,7 +856,7 @@ function createCategoryHeatmap() {
   const monthlyData = {};
   analytics.data.forEach(item => {
     const month = item.invoiceDate.toISOString().slice(0, 7);
-    
+
     if (!monthlyData[month]) monthlyData[month] = {};
     if (!monthlyData[month][item.category]) {
       monthlyData[month][item.category] = 0;
@@ -816,14 +865,14 @@ function createCategoryHeatmap() {
   });
 
   const months = Object.keys(monthlyData).sort();
-  
+
   // Get top categories by total spend
   const categoryTotals = {};
   analytics.data.forEach(item => {
     if (!categoryTotals[item.category]) categoryTotals[item.category] = 0;
     categoryTotals[item.category] += item.extPrice;
   });
-  
+
   const topCategories = Object.entries(categoryTotals)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
