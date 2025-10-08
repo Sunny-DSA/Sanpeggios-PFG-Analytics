@@ -222,9 +222,13 @@ const StoreUI = {
 
       // Refresh analytics with all data
       await refreshAnalytics();
-      await initializeAllCharts();
-      if (typeof initializeProductAnalytics === "function") {
-        await initializeProductAnalytics();
+
+      // Only initialize charts if we have analytics data
+      if (window.analytics && window.analytics.data && window.analytics.data.length > 0) {
+        await initializeAllCharts();
+        if (typeof initializeProductAnalytics === 'function') {
+          await initializeProductAnalytics();
+        }
       }
 
       await this.refreshStoreView(StoreDataManager.currentStore);

@@ -79,18 +79,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set up event listeners
     setupEventListeners();
 
-    // Initialize all charts
-    await initializeAllCharts();
+    // Initialize all charts only if we have analytics data
+    if (analytics && analytics.data && analytics.data.length > 0) {
+      await initializeAllCharts();
 
-    // Initialize product analytics if available
-    if (typeof initializeProductAnalytics === 'function') {
-      await initializeProductAnalytics();
+      // Initialize product analytics if available
+      if (typeof initializeProductAnalytics === 'function') {
+        await initializeProductAnalytics();
+      } else {
+        console.warn('Product analytics not available yet');
+      }
+
+      // Check for alerts
+      checkAndDisplayAlerts();
     } else {
-      console.warn('Product analytics not available yet');
+      console.log('No analytics data available yet, skipping chart initialization');
     }
-
-    // Check for alerts
-    checkAndDisplayAlerts();
 
   } catch (error) {
     console.error('Error initializing charts:', error);
@@ -186,13 +190,20 @@ async function initializeAllCharts() {
 // Sprint 1 & 2: Enhanced price trend chart with spikes
 function createPriceTrendChart() {
   const ctx = document.getElementById('priceTrendChart')?.getContext('2d');
-  if (!ctx) return;
+  if (!ctx) {
+    console.warn('Price trend chart canvas not found');
+    return;
+  }
 
   // Destroy existing chart
-  if (charts.priceTrend) charts.priceTrend.destroy();
+  if (charts.priceTrend) {
+    charts.priceTrend.destroy();
+    charts.priceTrend = null;
+  }
 
   // Check for data
   if (!analytics || !analytics.data || analytics.data.length === 0) {
+    console.warn('No analytics data for price trend chart');
     showChartEmptyState(ctx, 'No data available for price trend chart');
     return;
   }

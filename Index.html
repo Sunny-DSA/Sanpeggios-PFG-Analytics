@@ -550,13 +550,13 @@
                 
                 // Fetch and display user info
                 fetch('/__replauthuser')
-                    .then(response => {
+                    .then(function(response) {
                         if (!response.ok) {
                             throw new Error('Failed to fetch user info');
                         }
                         return response.json();
                     })
-                    .then(user => {
+                    .then(function(user) {
                         if (user && user.name) {
                             document.getElementById('userName').textContent = user.name;
                             if (user.email) {
@@ -566,7 +566,7 @@
                             document.getElementById('userName').textContent = 'User';
                         }
                     })
-                    .catch(error => {
+                    .catch(function(error) {
                         console.error('Error fetching user info:', error);
                         document.getElementById('userName').textContent = 'User';
                         document.getElementById('userEmail').textContent = 'Unable to load info';
