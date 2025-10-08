@@ -34,6 +34,26 @@
         <nav class="sidebar-nav" id="sidebarNav">
             <div class="sidebar-header">
                 <h2>🍕 PFG Analytics V3</h2>
+                <div class="user-profile-trigger" id="userProfileTrigger">
+                    <span class="user-icon">👤</span>
+                </div>
+            </div>
+            <div id="userProfileDropdown" class="user-profile-dropdown hidden">
+                <div class="user-profile-content">
+                    <div class="user-info" id="userInfo">
+                        <div class="user-avatar">👤</div>
+                        <div class="user-details">
+                            <div class="user-name" id="userName">Loading...</div>
+                            <div class="user-email" id="userEmail"></div>
+                        </div>
+                    </div>
+                    <div class="profile-actions">
+                        <a href="/auth/logout" class="btn-logout">
+                            <span class="logout-icon">🚪</span>
+                            Logout
+                        </a>
+                    </div>
+                </div>
             </div>
             <div class="sidebar-tabs">
                 <button class="sidebar-tab active" onclick="showTab('overview')" data-tab="overview">
@@ -510,6 +530,41 @@
 
     <!-- Additional Scripts for functionality -->
     <script>
+        // User Profile Dropdown
+        document.addEventListener('DOMContentLoaded', function() {
+            const trigger = document.getElementById('userProfileTrigger');
+            const dropdown = document.getElementById('userProfileDropdown');
+            
+            if (trigger && dropdown) {
+                trigger.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    dropdown.classList.toggle('hidden');
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!dropdown.contains(e.target) && !trigger.contains(e.target)) {
+                        dropdown.classList.add('hidden');
+                    }
+                });
+                
+                // Fetch and display user info
+                fetch('/__replauthuser')
+                    .then(response => response.json())
+                    .then(user => {
+                        if (user && user.name) {
+                            document.getElementById('userName').textContent = user.name;
+                            if (user.email) {
+                                document.getElementById('userEmail').textContent = user.email;
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching user info:', error);
+                    });
+            }
+        });
+
         // PDF Report Generation (placeholder)
         function generatePDFReport() {
             alert('PDF generation would be implemented here. For now, use Print (Ctrl+P) and save as PDF.');
