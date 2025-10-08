@@ -133,18 +133,14 @@ function createABCChart() {
               return '';
             }
           }
-        },
-        // Add click handler for interactivity
-        ... {
-          onClick: function(event, elements) {
-            if (elements.length > 0) {
-              const chart = this;
-              const elementIndex = elements[0].index;
-              const productData = data[elementIndex];
-              if (productData && productData.product) {
-                showProductDetails(encodeURIComponent(productData.product));
-              }
-            }
+        }
+      },
+      onClick: function(event, elements) {
+        if (elements.length > 0) {
+          const elementIndex = elements[0].index;
+          const productData = data[elementIndex];
+          if (productData && productData.product) {
+            showProductDetails(encodeURIComponent(productData.product));
           }
         }
       },
@@ -860,81 +856,6 @@ function createSubstitutionTable() {
       '<div class="summary-value">' + safeSubstitutions + ' opportunities</div>' +
     '</div>' +
     '<div class="summary-card">' +
-
-    /* Substitution Table Styles */
-    .substitution-legend {
-      display: flex;
-      gap: 1.5rem;
-      padding: 0.75rem;
-      background: #f9fafb;
-      border-radius: 6px;
-      font-size: 0.9rem;
-    }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .badge-risk {
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .badge-risk.low { background: #d1fae5; color: #065f46; }
-    .badge-risk.medium { background: #fed7aa; color: #92400e; }
-    .badge-risk.critical { background: #fee2e2; color: #991b1b; }
-    
-    .substitution-row.critical-item {
-      background: #fffbeb;
-    }
-    .product-name {
-      font-weight: 500;
-      color: #1f2937;
-    }
-    .pack-size {
-      font-size: 0.85rem;
-      color: #6b7280;
-      background: #f3f4f6;
-      padding: 0.125rem 0.5rem;
-      border-radius: 3px;
-    }
-    .recommendation-text {
-      font-size: 0.85rem;
-      color: #4b5563;
-      max-width: 200px;
-    }
-    
-    .substitution-summary {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-top: 1.5rem;
-    }
-    .summary-card {
-      background: #f9fafb;
-      padding: 1rem;
-      border-radius: 8px;
-      border: 1px solid #e5e7eb;
-      text-align: center;
-    }
-    .summary-label {
-      font-size: 0.85rem;
-      color: #6b7280;
-      margin-bottom: 0.5rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .summary-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #1f2937;
-    }
-    .summary-value.positive { color: #10b981; }
-    .summary-value.warning { color: #f59e0b; }
-
       '<div class="summary-label">Requires Testing</div>' +
       '<div class="summary-value warning">' + criticalSubstitutions + ' items</div>' +
     '</div>' +
