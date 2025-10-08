@@ -85,10 +85,16 @@ function createABCChart() {
     return;
   }
 
+  // Destroy existing chart if it exists
+  if (window.abcChartInstance) {
+    window.abcChartInstance.destroy();
+    window.abcChartInstance = null;
+  }
+
   const data = productAnalyticsData.abcAnalysis.products.slice(0, 20); // Top 20
 
   // Make the ABC chart interactive
-  const abcChartInstance = new Chart(ctx.getContext('2d'), {
+  window.abcChartInstance = new Chart(ctx.getContext('2d'), {
     type: 'bar',
     data: {
       labels: data.map(function(p) { return p.product.substring(0, 30); }),
@@ -253,6 +259,12 @@ function createBrandPerformanceChart() {
     return;
   }
 
+  // Destroy existing chart if it exists
+  if (window.brandChartInstance) {
+    window.brandChartInstance.destroy();
+    window.brandChartInstance = null;
+  }
+
   const brands = Object.values(productAnalyticsData.brandAnalysis)
     .sort(function(a, b) { return b.totalSpend - a.totalSpend; })
     .slice(0, 10);
@@ -276,7 +288,7 @@ function createBrandPerformanceChart() {
     };
   });
 
-  new Chart(ctx.getContext('2d'), {
+  window.brandChartInstance = new Chart(ctx.getContext('2d'), {
     type: 'bubble',
     data: { datasets: datasets },
     options: {
@@ -351,9 +363,15 @@ function createProductLifecycleChart() {
     return;
   }
 
+  // Destroy existing chart if it exists
+  if (window.lifecycleChartInstance) {
+    window.lifecycleChartInstance.destroy();
+    window.lifecycleChartInstance = null;
+  }
+
   const lifecycle = productAnalyticsData.lifecycle;
 
-  new Chart(ctx.getContext('2d'), {
+  window.lifecycleChartInstance = new Chart(ctx.getContext('2d'), {
     type: 'doughnut',
     data: {
       labels: ['New', 'Growing', 'Mature', 'Declining', 'At Risk'],
@@ -423,7 +441,13 @@ function createBrandComparisonChart() {
   const maxPrice = Math.max.apply(null, topBrands.map(function(b) { return b.avgPrice; }));
   const maxCategories = Math.max.apply(null, topBrands.map(function(b) { return b.categoryCount; }));
 
-  new Chart(ctx.getContext('2d'), {
+  // Destroy existing chart if it exists
+  if (window.brandComparisonChartInstance) {
+    window.brandComparisonChartInstance.destroy();
+    window.brandComparisonChartInstance = null;
+  }
+
+  window.brandComparisonChartInstance = new Chart(ctx.getContext('2d'), {
     type: 'radar',
     data: {
       labels: ['Total Spend', 'Product Variety', 'Avg Price', 'Category Coverage', 'Price Stability', 'Loyalty Rate'],
@@ -561,7 +585,13 @@ function createPackSizeOptimizationChart() {
     return;
   }
 
-  new Chart(ctx.getContext('2d'), {
+  // Destroy existing chart if it exists
+  if (window.packSizeChartInstance) {
+    window.packSizeChartInstance.destroy();
+    window.packSizeChartInstance = null;
+  }
+
+  window.packSizeChartInstance = new Chart(ctx.getContext('2d'), {
     type: 'bar',
     data: {
       labels: packSizes.map(function(ps) { return ps.category + ' - ' + ps.packSize; }),
@@ -659,7 +689,13 @@ function createVendorDiversificationChart() {
     };
   }).sort(function(a, b) { return b.score - a.score; });
 
-  new Chart(ctx.getContext('2d'), {
+  // Destroy existing chart if it exists
+  if (window.vendorDiversificationChartInstance) {
+    window.vendorDiversificationChartInstance.destroy();
+    window.vendorDiversificationChartInstance = null;
+  }
+
+  window.vendorDiversificationChartInstance = new Chart(ctx.getContext('2d'), {
     type: 'bar',
     data: {
       labels: diversificationScores.map(function(d) { return d.category; }),
@@ -1483,11 +1519,17 @@ function createBrandMarketShareChart() {
   const ctx = document.getElementById('brandMarketShareChart');
   if (!ctx || !productAnalyticsData || !productAnalyticsData.brandAnalysis) return;
 
+  // Destroy existing chart if it exists
+  if (window.brandMarketShareChartInstance) {
+    window.brandMarketShareChartInstance.destroy();
+    window.brandMarketShareChartInstance = null;
+  }
+
   const brands = Object.values(productAnalyticsData.brandAnalysis)
     .sort(function(a, b) { return b.totalSpend - a.totalSpend; })
     .slice(0, 8);
 
-  new Chart(ctx.getContext('2d'), {
+  window.brandMarketShareChartInstance = new Chart(ctx.getContext('2d'), {
     type: 'doughnut',
     data: {
       labels: brands.map(function(b) { return b.brand; }),
@@ -1573,6 +1615,12 @@ function createBrandTrendChart(brand) {
 
   const ctx = canvas.getContext('2d');
   
+  // Destroy existing chart if it exists
+  if (window.brandTrendChartInstance) {
+    window.brandTrendChartInstance.destroy();
+    window.brandTrendChartInstance = null;
+  }
+  
   // Get all invoices for this brand
   const brandInvoices = productAnalyticsData.rawData.filter(function(item) {
     return item.brand === brand.brand;
@@ -1592,7 +1640,7 @@ function createBrandTrendChart(brand) {
 
   const labels = Object.keys(monthlyData).sort();
   
-  new Chart(ctx, {
+  window.brandTrendChartInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,

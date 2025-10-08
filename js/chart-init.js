@@ -97,8 +97,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
   } catch (error) {
-    console.error('Error initializing charts:', error);
-    showError('Failed to initialize analytics: ' + error.message);
+    console.error('Error initializing charts:', error, error.stack);
+    if (error && error.message) {
+      showError('Failed to initialize analytics: ' + error.message);
+    } else {
+      showError('Failed to initialize analytics: Unknown error');
+    }
   }
 });
 
