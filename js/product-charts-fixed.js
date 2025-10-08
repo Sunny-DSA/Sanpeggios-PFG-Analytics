@@ -183,23 +183,6 @@ function createABCChart() {
  * Handles all product-level visualizations
  */
 
-// Global product analytics data
-let productAnalyticsData = null;
-
-// Color schemes for product charts
-const productColorSchemes = {
-  primary: [
-    'rgba(220, 38, 38, 0.8)',
-    'rgba(37, 99, 235, 0.8)',
-    'rgba(16, 185, 129, 0.8)',
-    'rgba(139, 92, 246, 0.8)',
-    'rgba(249, 115, 22, 0.8)',
-    'rgba(236, 72, 153, 0.8)',
-    'rgba(14, 165, 233, 0.8)',
-    'rgba(168, 85, 247, 0.8)'
-  ]
-};
-
 // Initialize product analytics
 async function initializeProductAnalytics() {
   console.log('Product analytics initialization called');
