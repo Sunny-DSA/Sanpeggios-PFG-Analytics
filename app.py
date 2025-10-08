@@ -156,6 +156,17 @@ def upload_invoice():
         'message': f'Successfully uploaded {new_records} new records ({duplicate_records} duplicates skipped)'
     })
 
+@app.route('/__replauthuser')
+@require_login
+def get_repl_auth_user():
+    """Return current user information for Repl Auth compatibility"""
+    return jsonify({
+        'id': current_user.id,
+        'name': f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or current_user.email or 'User',
+        'email': current_user.email,
+        'profileImage': current_user.profile_image_url
+    })
+
 @app.route('/api/stores', methods=['GET'])
 @require_login
 def get_stores():

@@ -90,11 +90,11 @@ body {
 .user-profile-dropdown {
   position: absolute;
   top: 100%;
-  right: 1rem;
+  right: 0;
   background: white;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1001;
+  z-index: 1002;
   min-width: 250px;
   margin-top: 0.5rem;
 }
