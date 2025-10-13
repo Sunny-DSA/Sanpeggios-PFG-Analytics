@@ -163,8 +163,11 @@ def logged_in(blueprint, token):
         print(f"Successfully decoded user claims: {user_claims.get('email', 'no email')}")
         
         user = save_user(user_claims)
-        login_user(user)
+        login_user(user, remember=True)  # Add remember=True for persistent session
         blueprint.token = token
+        
+        print(f"User logged in successfully: user_id={user.id}, authenticated={user.is_authenticated}")
+        
         next_url = session.pop("next_url", None)
         if next_url is not None:
             return redirect(next_url)

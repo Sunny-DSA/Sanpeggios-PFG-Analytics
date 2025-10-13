@@ -15,6 +15,13 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,
 }
 
+# Session configuration for better persistence
+from datetime import timedelta
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
 # Initialize extensions
 db.init_app(app)
 login_manager.init_app(app)
@@ -160,7 +167,11 @@ def upload_invoice():
 def get_repl_auth_user():
     """Return current user information for Repl Auth compatibility"""
     try:
-        print(f"/__replauthuser endpoint called, authenticated={current_user.is_authenticated}")
+        from flask import session as flask_session
+        print(f"/__replauthuser endpoint called")
+        print(f"Session contents: {dict(flask_session)}")
+        print(f"current_user.is_authenticated: {current_user.is_authenticated}")
+        print(f"current_user object: {current_user}")
         
         if not current_user.is_authenticated:
             print("User not authenticated, returning 401")
