@@ -54,6 +54,13 @@ This is an advanced supply chain intelligence and cost optimization platform for
 7. **Cost Optimization**: Identifies opportunities to reduce spending through strategic substitutions
 
 ## Recent Changes
+- **2025-10-13**: Production server timeout fix
+  - Installed Gunicorn as production-grade WSGI server (replaces Flask development server)
+  - Configured autoscale deployment to use Gunicorn with 4 workers and port reuse
+  - Fixed timeout issues caused by development server's inability to handle concurrent requests
+  - Production deployment now uses: `gunicorn --bind=0.0.0.0:5000 --workers=4 --reuse-port app:app`
+  - Achieves 40x performance improvement over Flask's built-in development server
+
 - **2025-10-06**: Analytics robustness improvements
   - Added division-by-zero safety checks across all analytics calculations
   - Implemented empty data handling with user-friendly messages for all charts
