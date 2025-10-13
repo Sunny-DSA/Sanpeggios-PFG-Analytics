@@ -18,11 +18,12 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 # Session configuration for better persistence
 from datetime import timedelta
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-# Only use Secure cookie in production (HTTPS), not in development  
-app.config['SESSION_COOKIE_SECURE'] = os.environ.get('REPLIT_DEPLOYMENT') == '1'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-# Use Lax for development, None for production
-app.config['SESSION_COOKIE_SAMESITE'] = 'None' if os.environ.get('REPLIT_DEPLOYMENT') == '1' else 'Lax'
+# In production (with HTTPS), use Secure + SameSite=None for OAuth in iframe
+# In development (HTTP), use Lax without Secure (browsers reject Secure on HTTP)
+is_production = os.environ.get('REPLIT_DEPLOYMENT') == '1'
+app.config['SESSION_COOKIE_SECURE'] = is_production
+app.config['SESSION_COOKIE_SAMESITE'] = 'None' if is_production else 'Lax'
 
 # Initialize extensions
 db.init_app(app)
@@ -260,12 +261,6 @@ def get_records(store_id):
 @app.route('/<path:path>')
 def serve_static(path):
     return send_from_directory('.', path)
-
-# Make session permanent
-@app.before_request
-def make_session_permanent():
-    from flask import session
-    session.permanent = True
 
 if __name__ == '__main__':
     init_database()
