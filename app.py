@@ -157,11 +157,16 @@ def upload_invoice():
     })
 
 @app.route('/__replauthuser')
-@require_login
 def get_repl_auth_user():
     """Return current user information for Repl Auth compatibility"""
     try:
-        print(f"/__replauthuser endpoint called by user_id={current_user.id}")
+        print(f"/__replauthuser endpoint called, authenticated={current_user.is_authenticated}")
+        
+        if not current_user.is_authenticated:
+            print("User not authenticated, returning 401")
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        print(f"User authenticated, user_id={current_user.id}")
         
         # Build full name from first and last name
         full_name = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip()
@@ -188,14 +193,7 @@ def get_repl_auth_user():
         import traceback
         traceback.print_exc()
         
-        response = jsonify({
-            'id': 'unknown',
-            'name': 'User',
-            'email': '',
-            'profileImage': ''
-        })
-        response.headers['Cache-Control'] = 'no-cache'
-        return response, 200
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/stores', methods=['GET'])
 @require_login
