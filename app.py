@@ -20,7 +20,7 @@ from datetime import timedelta
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # Required for OAuth in iframe/cross-origin context
 
 # Initialize extensions
 db.init_app(app)
@@ -35,6 +35,11 @@ from flask_login import current_user
 from flask import url_for
 
 app.register_blueprint(make_replit_blueprint(), url_prefix="/auth")
+
+@app.before_request
+def make_session_permanent():
+    from flask import session
+    session.permanent = True
 
 def init_database():
     with app.app_context():
