@@ -54,6 +54,15 @@ This is an advanced supply chain intelligence and cost optimization platform for
 7. **Cost Optimization**: Identifies opportunities to reduce spending through strategic substitutions
 
 ## Recent Changes
+- **2025-10-13**: Authentication loop fix
+  - Fixed infinite authentication redirect loop caused by Replit proxy intercepting `/__replauthuser` endpoint
+  - Renamed user info endpoint from `/__replauthuser` to `/api/userinfo` (unreserved path)
+  - Updated session cookie configuration: SameSite=Lax for development, SameSite=None+Secure for production
+  - Added session permanence with before_request handler
+  - Enhanced OAuth callback to always return proper redirect response
+  - Fixed frontend retry logic to prevent immediate redirects on auth failures
+  - User profile now loads correctly without triggering login loops
+
 - **2025-10-13**: Production server timeout fix
   - Installed Gunicorn as production-grade WSGI server (replaces Flask development server)
   - Configured autoscale deployment to use Gunicorn with 4 workers and port reuse

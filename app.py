@@ -18,9 +18,11 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 # Session configuration for better persistence
 from datetime import timedelta
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-app.config['SESSION_COOKIE_SECURE'] = True
+# Only use Secure cookie in production (HTTPS), not in development  
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('REPLIT_DEPLOYMENT') == '1'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # Required for OAuth in iframe/cross-origin context
+# Use Lax for development, None for production
+app.config['SESSION_COOKIE_SAMESITE'] = 'None' if os.environ.get('REPLIT_DEPLOYMENT') == '1' else 'Lax'
 
 # Initialize extensions
 db.init_app(app)
@@ -168,21 +170,12 @@ def upload_invoice():
         'message': f'Successfully uploaded {new_records} new records ({duplicate_records} duplicates skipped)'
     })
 
-@app.route('/__replauthuser')
-def get_repl_auth_user():
-    """Return current user information for Repl Auth compatibility"""
+@app.route('/api/userinfo')
+def get_user_info():
+    """Return current user information"""
     try:
-        from flask import session as flask_session
-        print(f"/__replauthuser endpoint called")
-        print(f"Session contents: {dict(flask_session)}")
-        print(f"current_user.is_authenticated: {current_user.is_authenticated}")
-        print(f"current_user object: {current_user}")
-        
         if not current_user.is_authenticated:
-            print("User not authenticated, returning 401")
             return jsonify({'error': 'Not authenticated'}), 401
-        
-        print(f"User authenticated, user_id={current_user.id}")
         
         # Build full name from first and last name
         full_name = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip()
@@ -197,15 +190,13 @@ def get_repl_auth_user():
             'profileImage': current_user.profile_image_url or ''
         }
         
-        print(f"Returning user data for user_id={current_user.id}: {display_name}, email={current_user.email}")
-        
         response = jsonify(user_data)
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
         return response
     except Exception as e:
-        print(f"Error in get_repl_auth_user: {e}")
+        print(f"Error in get_user_info: {e}")
         import traceback
         traceback.print_exc()
         

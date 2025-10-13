@@ -553,7 +553,7 @@
                     retries = retries || 0;
                     console.log('Attempting to fetch user info, attempt:', retries + 1);
                     
-                    fetch('/__replauthuser', {
+                    fetch('/api/userinfo', {
                         method: 'GET',
                         credentials: 'include',
                         headers: {

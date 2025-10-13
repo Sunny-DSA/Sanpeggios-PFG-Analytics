@@ -22,7 +22,10 @@ from extensions import db, login_manager
 @login_manager.user_loader
 def load_user(user_id):
     from models import User
-    return db.session.get(User, user_id)
+    print(f"load_user called with user_id={user_id}")
+    user = db.session.get(User, user_id)
+    print(f"load_user returning: {user}")
+    return user
 
 
 class UserSessionStorage(BaseStorage):
@@ -163,14 +166,14 @@ def logged_in(blueprint, token):
         print(f"Successfully decoded user claims: {user_claims.get('email', 'no email')}")
         
         user = save_user(user_claims)
-        login_user(user, remember=True)  # Add remember=True for persistent session
+        login_user(user, remember=True, fresh=True)  # Add remember=True for persistent session
         blueprint.token = token
         
         print(f"User logged in successfully: user_id={user.id}, authenticated={user.is_authenticated}")
         
-        next_url = session.pop("next_url", None)
-        if next_url is not None:
-            return redirect(next_url)
+        # Always redirect to ensure session is saved
+        next_url = session.pop("next_url", None) or url_for('index')
+        return redirect(next_url)
     except Exception as e:
         print(f"Login error: {e}")
         import traceback
