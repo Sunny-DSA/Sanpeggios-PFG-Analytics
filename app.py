@@ -160,12 +160,32 @@ def upload_invoice():
 @require_login
 def get_repl_auth_user():
     """Return current user information for Repl Auth compatibility"""
-    return jsonify({
-        'id': current_user.id,
-        'name': f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or current_user.email or 'User',
-        'email': current_user.email,
-        'profileImage': current_user.profile_image_url
-    })
+    try:
+        # Build full name from first and last name
+        full_name = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip()
+        
+        # Fallback to email username if no name available
+        display_name = full_name or (current_user.email.split('@')[0] if current_user.email else 'User')
+        
+        user_data = {
+            'id': current_user.id,
+            'name': display_name,
+            'email': current_user.email or '',
+            'profileImage': current_user.profile_image_url or ''
+        }
+        
+        print(f"Returning user data for user_id={current_user.id}: {display_name}")
+        return jsonify(user_data)
+    except Exception as e:
+        print(f"Error in get_repl_auth_user: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'id': 'unknown',
+            'name': 'User',
+            'email': '',
+            'profileImage': ''
+        }), 200
 
 @app.route('/api/stores', methods=['GET'])
 @require_login

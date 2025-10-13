@@ -548,29 +548,52 @@
                     }
                 });
                 
-                // Fetch and display user info
-                fetch('/__replauthuser')
-                    .then(function(response) {
-                        if (!response.ok) {
-                            throw new Error('Failed to fetch user info');
+                // Fetch and display user info with retry logic
+                function fetchUserInfo(retries) {
+                    retries = retries || 0;
+                    fetch('/__replauthuser', {
+                        credentials: 'same-origin',
+                        headers: {
+                            'Accept': 'application/json'
                         }
-                        return response.json();
                     })
-                    .then(function(user) {
-                        if (user && user.name) {
-                            document.getElementById('userName').textContent = user.name;
-                            if (user.email) {
-                                document.getElementById('userEmail').textContent = user.email;
+                        .then(function(response) {
+                            if (!response.ok) {
+                                throw new Error('HTTP ' + response.status);
                             }
-                        } else {
-                            document.getElementById('userName').textContent = 'User';
-                        }
-                    })
-                    .catch(function(error) {
-                        console.error('Error fetching user info:', error);
-                        document.getElementById('userName').textContent = 'User';
-                        document.getElementById('userEmail').textContent = 'Unable to load info';
-                    });
+                            return response.json();
+                        })
+                        .then(function(user) {
+                            console.log('User info loaded:', user);
+                            if (user && user.name) {
+                                document.getElementById('userName').textContent = user.name;
+                                if (user.email) {
+                                    document.getElementById('userEmail').textContent = user.email;
+                                } else {
+                                    document.getElementById('userEmail').textContent = '';
+                                }
+                            } else if (user && user.email) {
+                                document.getElementById('userName').textContent = user.email;
+                                document.getElementById('userEmail').textContent = '';
+                            } else {
+                                document.getElementById('userName').textContent = 'User';
+                                document.getElementById('userEmail').textContent = '';
+                            }
+                        })
+                        .catch(function(error) {
+                            console.error('Error fetching user info (attempt ' + (retries + 1) + '):', error);
+                            if (retries < 2) {
+                                setTimeout(function() {
+                                    fetchUserInfo(retries + 1);
+                                }, 1000);
+                            } else {
+                                document.getElementById('userName').textContent = 'User';
+                                document.getElementById('userEmail').textContent = 'Profile load failed';
+                            }
+                        });
+                }
+                
+                fetchUserInfo(0);
             }
         });
 
